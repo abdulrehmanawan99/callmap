@@ -1,0 +1,36 @@
+name: Local workflow checks
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.5-alpine
+        env:
+          POSTGRES_USER: callmap
+          POSTGRES_PASSWORD: callmap_local_only
+          POSTGRES_DB: callmap_test
+        ports: [55434:5432]
+        options: >-
+          --health-cmd "pg_isready -U callmap -d callmap_test"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7.4.3-alpine
+        ports: [6382:6379]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pytest api/tests -q
+        env:
+          CALLMAP_TEST_DATABASE_URL: postgresql://callmap:callmap_local_only@127.0.0.1:55434/callmap_test
+          REDIS_URL: redis://127.0.0.1:6382/0
+      - run: npm ci && npm run build && npm audit --audit-level=high
+        working-directory: web
