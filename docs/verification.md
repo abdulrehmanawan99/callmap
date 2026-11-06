@@ -13,17 +13,19 @@ The local fixture workflow and optional Gemini adapter are implemented. **Live c
 
 ## PostgreSQL integration boundary
 
-Local Docker is unavailable: its backend fails to resize Docker.raw with permission denied. No Docker disk, user volume, or alternate database runtime was changed. Consequently **the updated integration suite was not executed locally in this pass**.
+At the initial resume, local Docker was unavailable because its backend could not resize Docker.raw. No Docker disk or user volume was changed. Consequently **the updated integration suite was not executed locally in that offline pass**; the later remote result and restored local startup are recorded below.
 
-The existing GitHub Actions workflow runs `pytest api/tests` against dedicated PostgreSQL 17.5/Redis 7.4.3 services and `callmap_test`. It discovers all ten integration cases plus the offline provider/evaluation tests; no live key/call is needed. Remote results must be checked separately after push.
+The GitHub Actions workflow runs `pytest api/tests` against dedicated PostgreSQL 17.5/Redis 7.4.3 services and `callmap_test`. [Run 42222213675](https://github.com/abdulrehmanawan99/callmap/actions/runs/42222213675) passed **all 50 tests**, including all ten integration cases and the offline provider/evaluation checks. No live key/call was used. The current PR checks remain the source for later commit results.
 
-Integration assertions cover upload/auth/origin/object boundaries; real fixture worker/restart; review version conflicts and reviewed-only export; cancellation and deletion; mocked live pipeline provenance; cancellation during transcription; sanitized extraction failure; deletion during extraction; interrupted live jobs fail without replay; removal of a private upload when its database insertion fails; and a four-case real-DB regression for stale transcription/extraction success/failure against a newer attempt with identical status. These new database assertions remain unexecuted locally. They truncate only a configured database ending in `_test`, use temporary audio, and stop their worker subprocesses.
+Integration assertions cover upload/auth/origin/object boundaries; real fixture worker/restart; review version conflicts and reviewed-only export; cancellation and deletion; mocked live pipeline provenance; cancellation during transcription; sanitized extraction failure; deletion during extraction; interrupted live jobs fail without replay; removal of a private upload when its database insertion fails; and a four-case real-DB regression for stale transcription/extraction success/failure against a newer attempt with identical status. These passed on the isolated CI database. Tests truncate only a configured database ending in `_test`, use temporary audio, and stop their worker subprocesses.
+
+After Docker connectivity was restored, the existing source launcher was started against a fresh local CallMap database; UI 5175 and API 8012 returned HTTP 200. Previous Docker volumes were absent from the repaired engine; old filesystem artifacts were not deleted or treated as restored database records.
 
 ## Prior fixture evidence
 
 On 5 November the previous fixture milestone recorded **9 passed** using real local PostgreSQL/Redis and a real worker, plus a successful frontend build and dependency audits. The 33.8-second mono 22.05 kHz 16-bit WAV was generated using macOS `say`/`afconvert`; its authored manifest is fingerprint gated.
 
-The coordinator previously verified playback/seek, review save/reload, reviewed JSON download, deletion, no JavaScript errors, and no overflow at 390 px. After contrast fixes, desktop/mobile axe WCAG 2 A/AA + 2.1 AA scans reported zero violations. Existing screenshots in `docs/screenshots/` reflect that fixture UI. **The later opt-in/source-evidence/retry additions have passed compilation, but have not received a fresh browser/axe pass here.** Automated axe is not a full accessibility audit.
+The revised interface received a fresh real-persistence Chromium workflow in the CI run above: sample playback/seek, disabled unconfigured live-provider opt-in, review save/reload, reviewed-only JSON download with fixture provenance, and deletion passed without JavaScript errors or document overflow. Desktop and 390 px mobile axe WCAG 2 A/AA + 2.1 AA scans reported **zero violations**. Actual screenshots in `docs/screenshots/` were refreshed from that CI artifact and visually inspected. The browser script now also checks opening the exact source quotation. The enabled live-provider UI/model path still needs credentials and actual acceptance. Automated axe is not a full accessibility audit.
 
 ## Remaining acceptance work
 

@@ -32,6 +32,8 @@ try {
   assert((await page.locator("audio").evaluate((audio) => audio.currentTime)) >= manifest.segments[1].start - 0.2);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   const first = page.locator(".commitment").first();
+  await first.getByText("Exact source quotation", { exact: true }).click();
+  await expect(first.getByText(manifest.segments[1].text, { exact: true })).toBeVisible();
   await first.getByRole("textbox", { name: "Owner for item 1" }).fill("Leo reviewed");
   await first.getByRole("button", { name: "Accept action" }).click();
   await first.getByRole("button", { name: "Reviewed · undo" }).waitFor();
