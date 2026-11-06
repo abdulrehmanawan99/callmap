@@ -56,3 +56,5 @@ harness evidence, superseded for compatibility by this measured baseline.
 ## Independent follow-up
 
 A [prospective three-case corpus and frozen gates](independent-validation.md) were added after this baseline. The first new transcription request returned HTTP503 high demand and the run stopped after one request; two cases remain unattempted. No independent quality pass or extra baseline score is claimed.
+
+The subsequent [bounded independent resume](independent-validation.md#bounded-resume-after-availability-recovered) measured one case but did not pass the frozen gates and stopped on the next transcript validation failure. The earlier baseline remains development evidence, not a general acceptance claim.
