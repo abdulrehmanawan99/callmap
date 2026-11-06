@@ -101,3 +101,59 @@ def test_independent_runner_default_is_offline_and_skips_attempted_cases(monkeyp
     assert plan['pending'] == ['named-calendar', 'relative-open']
     assert plan['previously_attempted'] == ['background-only']
     assert plan['maximum_remaining_generation_requests'] == 4
+
+
+@pytest.mark.parametrize('patch', [
+    {'source_quote': ''}, {'source_quote': '   '}, {'source_quote': None},
+    {'source_quote': 42}, {'segment_id': -1}, {'segment_id': 99},
+    {'segment_id': True}, {'segment_id': '0'}, {'segment_id': 0.0},
+])
+def test_independent_source_check_rejects_malformed_quote_or_id(patch):
+    from scripts.score_independent import assess, CORPUS
+    reference = json.loads((CORPUS / 'named-calendar.json').read_text())
+    gates = json.loads((CORPUS / 'gates.json').read_text())
+    expected = reference['expected'][0]
+    item = dict(text=' '.join(expected['keywords']), kind=expected['kind'],
+                owner=expected['owner'], due_date=expected['due_date'],
+                segment_id=0, source_quote=reference['segments'][0]['text'])
+    result = dict(status='ready', segments=reference['segments'], commitments=[item | patch])
+    assessment = assess(reference, result, gates)
+    assert not assessment['passed']
+    assert assessment['checks']['exact_source_quotes'] is False
+
+
+@pytest.mark.parametrize('mode,exit_code', [('pass', 0), ('fail', 1), ('partial-fail', 1), ('empty', 2)])
+def test_independent_score_cli_exit_statuses(tmp_path, mode, exit_code):
+    import subprocess
+    from api.core import ROOT
+    from scripts.score_independent import CORPUS
+    results = {}
+    if mode != 'empty':
+        for filename in json.loads((CORPUS / 'corpus.json').read_text())['cases']:
+            reference = json.loads((CORPUS / filename).read_text())
+            items = [dict(text=' '.join(item['keywords']), kind=item['kind'],
+                          owner=item['owner'], due_date=item['due_date'],
+                          segment_id=item['reference_segment'],
+                          source_quote=reference['segments'][item['reference_segment']]['text'])
+                     for item in reference['expected']]
+            results[reference['id']] = dict(status='ready', segments=reference['segments'], commitments=items)
+        if mode in {'fail', 'partial-fail'}:
+            results['named-calendar']['commitments'][0]['owner'] = 'Invented owner'
+        if mode == 'partial-fail':
+            results = {'named-calendar': results['named-calendar']}
+    source, output = tmp_path / 'results.json', tmp_path / 'report.json'
+    source.write_text(json.dumps(results))
+    process = subprocess.run(
+        [sys.executable, '-m', 'scripts.score_independent', '--results', str(source), '--output', str(output)],
+        cwd=ROOT, capture_output=True, text=True, timeout=10,
+    )
+    assert process.returncode == exit_code, process.stderr
+    report = json.loads(output.read_text())
+    assert report['scoring_only_no_requests'] is True
+    if mode == 'empty':
+        assert report['quality_acceptance'] == 'not_established'
+        assert report['measured_cases'] == 0
+        assert all(case['status'] == 'not_attempted' and 'metrics' not in case for case in report['cases'].values())
+    if mode == 'partial-fail':
+        assert report['quality_acceptance'] == 'failed_frozen_gates'
+        assert report['measured_cases'] == 1

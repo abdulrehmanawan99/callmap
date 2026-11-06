@@ -27,12 +27,14 @@ The run stopped immediately. **One new generation request occurred**, below the 
 ```sh
 # Default is offline: lists pending/previously attempted cases, makes no HTTP request.
 .venv/bin/python -m scripts.evaluate_independent
-# Offline scoring reads already persisted API results; makes no provider call.
+# Offline scoring reads already persisted API results; makes no provider call. Exit 2 is expected while cases are unmeasured.
 .venv/bin/python -m scripts.score_independent \
   --results .local/independent-api-results.json \
   --output .local/independent-gates.json
 ```
 
-The runner's explicit `--allow-external-synthetic-audio` flag is reserved for a newly authorized future run after service availability changes. It uses only the fixed loopback API and existing server-side exact-model configuration. It checkpoints the recording ID before polling, skips every previously attempted case (including failures), waits at most 140 seconds per job, and stops on the first failure/cancellation. It never retries or resets the saved results. Retain the same results file; changing/removing it can lose the record of prior external sends. No further live invocation is authorized as part of this completed attempt.
+The runner's explicit `--allow-external-synthetic-audio` flag expresses deliberate external-send intent under the existing exact-model synthetic-test authorization. Resume only after service availability changes, with a documented bounded request budget. It uses only the fixed loopback API and existing server-side exact-model configuration. It checkpoints the recording ID before polling, skips every previously attempted case (including failures), waits at most 140 seconds per job, and stops on the first failure/cancellation. It never retries or resets the saved results. Retain the same results file; changing/removing it can lose the record of prior external sends. This attempt stopped at its first service failure and schedules no further calls. The existing user authorization persists; a future bounded run must retain these results and must not automatically retry the failed case.
+
+Scorer exit codes are **0** when every measured case passes all gates, **1** for any measured quality failure (even if other cases remain unmeasured), and **2** when acceptance is not established with no measured failure and incomplete coverage. All outcomes still write their report. Exact source checks require an existing integer segment ID and a nonblank string quotation contained in that segment; negative or boolean IDs and malformed quotations fail the check.
 
 The HTTP503 UI error is now a fixed actionable temporary-unavailability message, with a regression proving one request and no retry. Offline scorer checks cover empty ground truth, invented owners/dates, unmeasured cases and source fingerprints. Broader quality, noisy speech, diarization and a second provider remain unverified; a second provider is outside the exact-model authorization.
