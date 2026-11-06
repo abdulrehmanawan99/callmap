@@ -1,0 +1,45 @@
+{
+  "id": "relative-open",
+  "audio": "relative-open.wav",
+  "sha256": "6a8e93d733ae6bc149fff3f64a439c25724d8685412b6bba73779efc94c1d422",
+  "duration": 6.03,
+  "segments": [
+    {
+      "id": 0,
+      "speaker": "Synthetic voice",
+      "text": "I will update the warehouse roster tomorrow.",
+      "start": 0.0,
+      "end": 2.33
+    },
+    {
+      "id": 1,
+      "speaker": "Synthetic voice",
+      "text": "Who approves the replacement labels next Friday?",
+      "start": 2.83,
+      "end": 5.53
+    }
+  ],
+  "expected": [
+    {
+      "kind": "action",
+      "keywords": [
+        "warehouse",
+        "roster"
+      ],
+      "owner": "",
+      "due_date": null,
+      "reference_segment": 0
+    },
+    {
+      "kind": "question",
+      "keywords": [
+        "replacement",
+        "labels"
+      ],
+      "owner": "",
+      "due_date": null,
+      "reference_segment": 1
+    }
+  ],
+  "provenance": "Original synthetic speech: local macOS say Samantha 170 wpm; PCM afconvert; authored labels and measured synthesized-utterance boundaries frozen before inference. No speaker-identification label is inferred from voice."
+}

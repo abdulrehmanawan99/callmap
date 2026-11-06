@@ -1,0 +1,76 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "split": "development baseline; not held out",
+  "source_sha256": "d7c9b5181d5502e39933fe0e472813fd1add1609fd9b5302df2e88693213a69c",
+  "metrics": {
+    "wer": 0.1444,
+    "extraction": {
+      "true_positives": 4,
+      "predicted": 4,
+      "expected": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "date_matches": 4,
+      "owner_matches": 4
+    },
+    "timestamp_errors": [
+      {
+        "reference_segment": 0,
+        "start_error_seconds": 0.0,
+        "end_error_seconds": 0.162
+      },
+      {
+        "reference_segment": 1,
+        "start_error_seconds": 0.052,
+        "end_error_seconds": 0.192
+      },
+      {
+        "reference_segment": 2,
+        "start_error_seconds": 0.192,
+        "end_error_seconds": 0.497
+      },
+      {
+        "reference_segment": 3,
+        "start_error_seconds": 0.437,
+        "end_error_seconds": 0.007
+      },
+      {
+        "reference_segment": 4,
+        "start_error_seconds": 0.193,
+        "end_error_seconds": 0.291
+      },
+      {
+        "reference_segment": 5,
+        "start_error_seconds": 0.401,
+        "end_error_seconds": 0.591
+      }
+    ],
+    "timestamp_mean_boundary_error_seconds": 0.251,
+    "method": "Normalized token Levenshtein WER; exact keyword/kind one-to-one extraction matching; best lexical-overlap segment boundary alignment. Review split/merged segments and paraphrases manually."
+  },
+  "usage": [
+    {
+      "total_tokens": 1418,
+      "latency_seconds": 3.707,
+      "total_input_tokens": 966,
+      "total_output_tokens": 452,
+      "total_thought_tokens": 0
+    },
+    {
+      "total_tokens": 956,
+      "latency_seconds": 1.953,
+      "total_input_tokens": 483,
+      "total_output_tokens": 473,
+      "total_thought_tokens": 0
+    }
+  ],
+  "app_latency_seconds": 6.225,
+  "successful_attempt_http_requests": 2,
+  "total_known_http_attempts_including_prior_failures": 5,
+  "limitations": [
+    "Single synthetic development recording; not independent held out",
+    "Dates normalized by model; all3 explicit dates validated locally",
+    "Neutral speaker labels; diarization not evaluated",
+    "Commitments are pending human review"
+  ]
+}
