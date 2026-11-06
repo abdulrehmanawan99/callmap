@@ -13,7 +13,7 @@ from scripts import evaluate_live
 @pytest.mark.parametrize("allow,configured,attempts", [(False, True, 0), (True, False, 0), (True, True, 1)])
 def test_blocked_evaluation_counts_only_http_attempts(monkeypatch, tmp_path, allow, configured, attempts):
     monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
-    monkeypatch.setenv("CALLMAP_GEMINI_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("CALLMAP_GEMINI_MODEL", "gemini-3.5-flash-lite")
     if configured:
         monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
     else:

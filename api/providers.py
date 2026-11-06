@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions"
 API_REVISION = "2026-05-20"
-MODEL = "gemini-3.8-flash"
+MODEL = "gemini-3.5-flash-lite"
 MAX_LIVE_BYTES = 10 * 1024 * 1024
 MAX_RESPONSE_BYTES = 512 * 1024
 REQUEST_DEADLINE_SECONDS = 65
@@ -171,7 +171,7 @@ class Gemini:
         self.model = os.getenv("CALLMAP_GEMINI_MODEL", MODEL)
         if self.model != MODEL:
             raise ProviderError(
-                "Unsupported Gemini model. This adapter currently validates gemini-3.8-flash only; no paid fallback is allowed."
+                "Unsupported Gemini model. This adapter currently validates gemini-3.5-flash-lite only; no paid fallback is allowed."
             )
         self.key = os.getenv("GEMINI_API_KEY", "")
         if os.getenv("CALLMAP_PROVIDER", "fixture") != "gemini" or not self.key:
@@ -190,7 +190,7 @@ class Gemini:
             "model": self.model,
             "input": contents,
             "store": False,
-            "generation_config": {"max_output_tokens": 6000, "thinking_level": "low"},
+            "generation_config": {"max_output_tokens": 6000, "thinking_level": "minimal"},
             "response_format": {
                 "type": "text",
                 "mime_type": "application/json",

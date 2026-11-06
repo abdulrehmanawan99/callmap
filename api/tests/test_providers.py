@@ -57,7 +57,7 @@ def reply(value):
 def live_env(monkeypatch):
     monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
-    monkeypatch.setenv("CALLMAP_GEMINI_MODEL", "gemini-3.8-flash")
+    monkeypatch.setenv("CALLMAP_GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 def test_native_interactions_audio_then_grounded_text_contract(live_env):
@@ -74,6 +74,8 @@ def test_native_interactions_audio_then_grounded_text_contract(live_env):
             and body["generation_config"]["max_output_tokens"] == 6000
         )
         assert body["response_format"]["mime_type"] == "application/json"
+        assert body["model"] == "gemini-3.5-flash-lite"
+        assert body["generation_config"]["thinking_level"] == "minimal"
         if len(calls) == 1:
             assert base64.b64decode(body["input"][1]["data"]) == wav()
             assert body["input"][1]["mime_type"] == "audio/wav"
@@ -247,3 +249,10 @@ def test_total_deadline_cancels_stalled_response_headers(live_env, monkeypatch):
     with pytest.raises(ProviderError, match="deadline"):
         provider.transcribe(wav(), 1)
     assert cancelled == [True] and provider.http_attempts == 1
+
+
+@pytest.mark.parametrize("model", ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-lite-latest"])
+def test_only_exact_authorized_model_is_accepted(live_env, monkeypatch, model):
+    monkeypatch.setenv("CALLMAP_GEMINI_MODEL", model)
+    with pytest.raises(ProviderError, match="Unsupported"):
+        Gemini()

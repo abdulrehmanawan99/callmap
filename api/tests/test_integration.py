@@ -246,7 +246,7 @@ def test_live_pipeline_persistence_and_cancel_publish_guard(client, monkeypatch)
     assert row["status"] == "ready" and row["provider"] == "gemini" and len(calls) == 2
     assert row["commitments"][0]["source_quote"] == ITEM["source_quote"]
     assert (
-        row["provenance"]["model"] == "gemini-3.8-flash"
+        row["provenance"]["model"] == "gemini-3.5-flash-lite"
         and len(row["provenance"]["usage"]) == 2
     )
     assert client.post(f"/api/recordings/{rid}/retry").status_code == 409

@@ -4,7 +4,9 @@ The local fixture workflow and optional Gemini adapter are implemented. **Live c
 
 ## Current local checks
 
-- `.venv/bin/python -m pytest api/tests -q`: **40 passed, 10 skipped**, one upstream Starlette warning about its deprecated httpx TestClient transport. The ten skipped cases require the explicit disposable PostgreSQL database.
+The model-only migration pins `gemini-3.5-flash-lite` and rejects all other IDs, including aliases, before HTTP. Official model/Interactions/audio/structured-output docs were rechecked on 6 November; audio input and structured text output are documented. Thinking uses the documented `minimal` default. The coordinator owns the authorized key and live validation; this migration read no secret and made no live calls.
+
+- `.venv/bin/python -m pytest api/tests -q`: **43 passed, 10 skipped**, one upstream Starlette warning about its deprecated httpx TestClient transport. The ten skipped cases require the explicit disposable PostgreSQL database.
 - Offline checks cover PCM bounds/fingerprint gating; native Interactions HTTP request shape; timestamp ordering/IDs; exact quotations, explicit owner/date grounding; quota/auth/redirect/timeout/oversized/malformed responses; cancellation of a stalled response-header wait by the total network deadline; no automatic retries; fixture/key/model preflight; evaluation WER and no-call/error report accounting. HTTP responses are mocked: these checks do not establish actual model support.
 - `npm run build` with Node 24: strict TypeScript and Vite production build passed; JS **209.37 kB (66.60 kB gzip)**, CSS 19.57 kB (4.82 kB gzip).
 - Full `npm audit`: **0 vulnerabilities**. `python -m pip check`: no broken requirements. `pip-audit --disable-pip --no-deps -r requirements.lock` from a disposable audit environment: **no known vulnerabilities found**. Dependency audits are time-specific advisory checks.
