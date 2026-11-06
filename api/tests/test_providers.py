@@ -282,3 +282,14 @@ def test_only_exact_authorized_model_is_accepted(live_env, monkeypatch, model):
     monkeypatch.setenv("CALLMAP_GEMINI_MODEL", model)
     with pytest.raises(ProviderError, match="Unsupported"):
         Gemini()
+
+
+@pytest.mark.parametrize('patch,message', [
+    ({'id': 1}, 'non-consecutive'),
+    ({'start': .8, 'end': .7}, 'unordered'),
+    ({'end': 1.001}, 'measured WAV duration'),
+])
+def test_transcript_validation_reasons_are_fixed_and_precise(patch, message):
+    transcript = Transcript.model_validate({'segments': [TRANSCRIPT['segments'][0] | patch]})
+    with pytest.raises(ProviderError, match=message):
+        transcript.validate_duration(1)

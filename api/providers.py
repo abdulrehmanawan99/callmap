@@ -65,12 +65,17 @@ class Transcript(BaseModel):
     def validate_duration(self, duration: float):
         previous = 0.0
         for i, segment in enumerate(self.segments):
-            if (
-                segment.id != i
-                or not previous <= segment.start < segment.end <= duration
-            ):
+            if segment.id != i:
                 raise ProviderError(
-                    "Provider transcript has invalid ordering, IDs, or timestamps. Retry or review another recording."
+                    "Provider transcript has non-consecutive segment IDs. No transcript was accepted."
+                )
+            if not previous <= segment.start < segment.end:
+                raise ProviderError(
+                    "Provider transcript has overlapping or unordered timestamps. No transcript was accepted."
+                )
+            if segment.end > duration:
+                raise ProviderError(
+                    "Provider transcript timestamp exceeds the measured WAV duration. No transcript was accepted."
                 )
             if not segment.text.strip() or not segment.speaker.strip():
                 raise ProviderError(
