@@ -8,6 +8,7 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:17.5-alpine
@@ -39,3 +40,48 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6382/0
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Browser fixture workflow with real persistence
+        env:
+          DATABASE_URL: postgresql://callmap:callmap_local_only@127.0.0.1:55434/callmap_test
+          REDIS_URL: redis://127.0.0.1:6382/0
+          CALLMAP_DATA_DIR: .local/browser-audio
+          CALLMAP_LOCAL_TOKEN: ci-browser-fixture-only
+          CALLMAP_TEST_TOKEN: ci-browser-fixture-only
+          CALLMAP_PROVIDER: fixture
+          GEMINI_API_KEY: ''
+        run: |
+          set -euo pipefail
+          api_pid='' worker_pid='' web_pid=''
+          cleanup() {
+            for pid in "$api_pid" "$worker_pid" "$web_pid"; do
+              if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
+            done
+            for pid in "$api_pid" "$worker_pid" "$web_pid"; do
+              if [ -n "$pid" ]; then wait "$pid" 2>/dev/null || true; fi
+            done
+          }
+          trap cleanup EXIT
+          python -c 'from api.core import migrate; migrate()'
+          python -m uvicorn api.main:app --host 127.0.0.1 --port 8012 --no-access-log > callmap-api-test.log 2>&1 &
+          api_pid=$!
+          python -m api.worker > callmap-worker-test.log 2>&1 &
+          worker_pid=$!
+          (cd web && exec node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5175 --strictPort) > callmap-web-test.log 2>&1 &
+          web_pid=$!
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8012/api/health > /dev/null && curl --fail --silent http://127.0.0.1:5175 > /dev/null; then break; fi
+            if ! kill -0 "$api_pid" "$worker_pid" "$web_pid" 2>/dev/null; then
+              cat callmap-api-test.log callmap-worker-test.log callmap-web-test.log
+              exit 1
+            fi
+            sleep 1
+          done
+          npm run test:browser --prefix web
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: browser-evidence
+          path: .local/browser
+          if-no-files-found: ignore
