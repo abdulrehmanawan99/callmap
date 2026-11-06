@@ -21,6 +21,30 @@ REQUEST_DEADLINE_SECONDS = 65
 PROMPT_VERSION = "callmap-grounded-v2"
 
 
+def generation_schema(schema):
+    """Keep wire structure small; enforce value/length bounds locally with Pydantic."""
+    constraints = {
+        "minimum",
+        "maximum",
+        "exclusiveMinimum",
+        "exclusiveMaximum",
+        "minLength",
+        "maxLength",
+        "minItems",
+        "maxItems",
+        "format",
+    }
+    if isinstance(schema, dict):
+        return {
+            key: generation_schema(value)
+            for key, value in schema.items()
+            if key not in constraints
+        }
+    if isinstance(schema, list):
+        return [generation_schema(value) for value in schema]
+    return schema
+
+
 class ProviderError(ValueError):
     """Only fixed, non-secret messages may cross the HTTP/UI boundary."""
 
@@ -194,7 +218,7 @@ class Gemini:
             "response_format": {
                 "type": "text",
                 "mime_type": "application/json",
-                "schema": schema,
+                "schema": generation_schema(schema),
             },
         }
         data = json.dumps(payload).encode()
@@ -222,9 +246,11 @@ class Gemini:
             ) as response:
                 if response.status_code != 200:
                     messages = {
+                        400: "Gemini rejected the request schema or parameters. Check the adapter configuration before retrying explicitly.",
                         401: "Gemini rejected the API key.",
                         403: "Gemini access is denied for this key/project.",
                         429: "Gemini quota or rate limit reached. No automatic retry was made.",
+                        503: "Gemini is temporarily unavailable or under high demand. No automatic retry was made.",
                     }
                     raise ProviderError(
                         messages.get(

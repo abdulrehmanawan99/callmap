@@ -1,0 +1,17 @@
+{
+  "version": "callmap-independent-gates-v1",
+  "frozen_before_audio_generation_and_inference": true,
+  "basis": "Prior development baseline WER 0.1444 and mean boundary error 0.251 seconds; small synthetic scope requires exact extraction and owner/date correctness.",
+  "model": "gemini-3.5-flash-lite",
+  "max_generation_requests": 6,
+  "per_recording": {
+    "normalized_token_wer_max": 0.25,
+    "mean_boundary_error_seconds_max": 0.75,
+    "single_boundary_error_seconds_max": 1.5,
+    "extraction_precision_min": 1.0,
+    "extraction_recall_min": 1.0,
+    "owner_and_due_date_agreement": "all matched items; no invented named owner or absolute date",
+    "no_commitment_case": "exactly zero predictions"
+  },
+  "interpretation": "WER uses literal normalized alphanumeric tokens: spoken versus numeric date formatting can add errors despite an equivalent date. Never adjust scores or gates after seeing outputs. Boundary matching is lexical and must be inspected for split/merged segments. Three clear synthetic cases do not establish noisy human-speech, diarization or general production acceptance. Stop on auth, quota or service failure; never retry to improve scores."
+}

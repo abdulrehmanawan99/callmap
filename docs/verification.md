@@ -1,8 +1,22 @@
 # Verification — 6 November 2026
 
-The local fixture workflow and optional Gemini adapter are implemented. **Live compatibility and quality acceptance remain pending.** No key was read and no live inference, paid call, or model download was made for this work.
+The local fixture workflow and optional Gemini adapter are implemented. **Actual exact-model compatibility now passes on one synthetic development recording; broader quality acceptance remains pending.** See [live validation](live-validation.md) and [measurements](live-development.json). Earlier no-call checks below are historical.
 
-## Current local checks
+## Follow-up validation after PR1 merged
+
+The schema-complexity fix passed **55 tests** locally, including all10 real
+PostgreSQL integration cases against dedicated `callmap_test`. No tests touched
+the application database. These include the new wire-schema/local-validation
+regression and sanitized HTTP400 handling. The actual successful synthetic live
+pipeline and reviewed-only export are recorded in [live validation](live-validation.md).
+
+## Independent quality follow-up
+
+The new [corpus, frozen gates and report](independent-validation.md) preserve a no-commitment case, named owner/calendar date, and unresolved relative dates. The first new exact-model transcription returned HTTP503; one request was made and no further live calls followed. Independent quality remains **blocked**, with zero measured cases and no invented scores.
+
+The expanded suite passed **61 tests** against dedicated `callmap_test` before the final offline-runner-default regression was added; the focused evaluation suite was rerun afterward. Corpus/scoring checks cover empty ground truth, invented owner/date, unmeasured cases, waveform fingerprints and a default no-HTTP resume plan. Fixed HTTP503 handling is sanitized and never retries. Compilation and whitespace checks passed.
+
+## Prior local checks
 
 The model-only migration pins `gemini-3.5-flash-lite` and rejects all other IDs, including aliases, before HTTP. Official model/Interactions/audio/structured-output docs were rechecked on 6 November; audio input and structured text output are documented. Thinking uses the documented `minimal` default. The coordinator owns the authorized key and live validation; this migration read no secret and made no live calls.
 
@@ -31,4 +45,4 @@ The revised interface received a fresh real-persistence Chromium workflow in the
 
 ## Remaining acceptance work
 
-An authorized billing-disabled Gemini project is required to establish actual API/model compatibility and a measured development baseline. Current labels use the authored sample and are not held out; approximate lexical matching requires manual review. Set acceptance thresholds after inspecting real results, then evaluate independent consented/synthetic audio. A second capable provider, live WER/precision/recall/timestamp quality, diarization, production load, hosted deployment, secure erasure, and fresh-checkout end-to-end acceptance are unverified. No claim of full PRD or two-provider acceptance is made.
+The supplied free-tier key established actual API/model compatibility and a measured development baseline; no billing settings were changed. Current labels use the authored sample and are not held out; approximate lexical matching requires manual review. Set acceptance thresholds after inspecting real results, then evaluate independent consented/synthetic audio. A second capable provider, independent live quality evaluation, diarization, production load, hosted deployment, secure erasure, and fresh-checkout end-to-end acceptance are unverified. No claim of full PRD or two-provider acceptance is made.
