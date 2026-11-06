@@ -43,6 +43,16 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6382/0
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: web
+      - name: Static checks and secret patterns
+        run: |
+          python -m compileall -q api scripts
+          python scripts/check_secrets.py --include-build
+      - name: Isolated Python security audit
+        run: |
+          python -m venv /tmp/callmap-audit
+          /tmp/callmap-audit/bin/pip install pip-audit==2.10.1 bandit==1.9.4
+          /tmp/callmap-audit/bin/pip-audit --disable-pip --no-deps -r requirements.lock
+          /tmp/callmap-audit/bin/bandit -r api scripts -ll
       - run: npx playwright install --with-deps chromium
         working-directory: web
       - name: Browser fixture workflow with real persistence
