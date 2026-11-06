@@ -1,0 +1,11 @@
+{
+  "evaluated_at": "2026-11-06T12:50:21.215841+00:00",
+  "status": "blocked",
+  "live_http_attempts": 0,
+  "dataset": "callmap-dev-labels-v1",
+  "split": "development baseline; not held out",
+  "source_sha256": "d7c9b5181d5502e39933fe0e472813fd1add1609fd9b5302df2e88693213a69c",
+  "prompt_version": "callmap-grounded-v2",
+  "thresholds": null,
+  "reason": "Live evaluation not authorized. Run with the explicit external-audio flag and a configured billing-disabled Gemini project."
+}
