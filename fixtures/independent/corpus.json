@@ -1,0 +1,10 @@
+{
+  "version": "callmap-independent-synthetic-v1",
+  "split": "prospective independent synthetic cases; frozen before first inference, distinct from development recording",
+  "gates": "gates.json",
+  "cases": [
+    "background-only.json",
+    "named-calendar.json",
+    "relative-open.json"
+  ]
+}

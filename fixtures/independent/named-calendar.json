@@ -1,0 +1,28 @@
+{
+  "id": "named-calendar",
+  "audio": "named-calendar.wav",
+  "sha256": "2fbcdf15feb1c342f36e4f6496d794b82bbf312d4b0849208d442af2318d4f00",
+  "duration": 5.056,
+  "segments": [
+    {
+      "id": 0,
+      "speaker": "Synthetic voice",
+      "text": "Nora will email the shipping summary by December seventh, twenty twenty six.",
+      "start": 0.0,
+      "end": 4.556
+    }
+  ],
+  "expected": [
+    {
+      "kind": "action",
+      "keywords": [
+        "shipping",
+        "summary"
+      ],
+      "owner": "Nora",
+      "due_date": "2026-12-07",
+      "reference_segment": 0
+    }
+  ],
+  "provenance": "Original synthetic speech: local macOS say Samantha 170 wpm; PCM afconvert; authored labels and word-boundary timing frozen before inference. No speaker-identification label is inferred from voice."
+}
