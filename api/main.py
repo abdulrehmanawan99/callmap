@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from api.providers import MAX_LIVE_BYTES, MODEL
+
 from api.core import (
     DATA,
     FIXTURE,
@@ -34,7 +36,7 @@ async def lifespan(_):
     yield
 
 
-app = FastAPI(title="CallMap local fixture API", lifespan=lifespan)
+app = FastAPI(title="CallMap local audio workspace API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(ORIGINS),
@@ -87,7 +89,17 @@ def public(row):
     } | {"fixture": row["sha256"] == FIXTURE["sha256"]}
 
 
-def create_recording(data, title):
+def create_recording(data, title, provider="fixture"):
+    if provider == "gemini":
+        if os.getenv("CALLMAP_PROVIDER", "fixture") != "gemini" or not os.getenv(
+            "GEMINI_API_KEY"
+        ):
+            raise HTTPException(
+                409,
+                "Live Gemini is not configured. Default fixture mode sends no audio externally.",
+            )
+        if len(data) > MAX_LIVE_BYTES:
+            raise HTTPException(413, "Live Gemini inline audio is limited to 10 MiB.")
     try:
         duration, fingerprint = validate_wav(data)
     except ValueError as exc:
@@ -101,8 +113,8 @@ def create_recording(data, title):
     try:
         with connect() as db:
             row = db.execute(
-                "INSERT INTO recordings (id,title,storage_name,sha256,duration,status) VALUES (%s,%s,%s,%s,%s,'queued') RETURNING *",
-                (rid, title, name, fingerprint, duration),
+                "INSERT INTO recordings (id,title,storage_name,sha256,duration,status,provider) VALUES (%s,%s,%s,%s,%s,'queued',%s) RETURNING *",
+                (rid, title, name, fingerprint, duration, provider),
             ).fetchone()
     except Exception:
         path.unlink(missing_ok=True)
@@ -113,7 +125,12 @@ def create_recording(data, title):
 
 @app.get("/api/health")
 def health():
-    return {"mode": "fingerprint-gated synthetic fixture", "live_inference": False}
+    return {
+        "mode": "fixture default; optional Gemini",
+        "live_inference": os.getenv("CALLMAP_PROVIDER", "fixture") == "gemini"
+        and bool(os.getenv("GEMINI_API_KEY")),
+        "live_model": MODEL,
+    }
 
 
 @app.get("/api/recordings", dependencies=[Depends(authorize)])
@@ -142,7 +159,11 @@ def load_sample():
 
 
 @app.post("/api/recordings/upload", status_code=201, dependencies=[Depends(authorize)])
-async def upload(request: Request, title: str = "Uploaded recording"):
+async def upload(
+    request: Request,
+    title: str = "Uploaded recording",
+    provider: Literal["fixture", "gemini"] = "fixture",
+):
     title = title.strip()
     if not title or len(title) > 120 or any(ord(c) < 32 for c in title):
         raise HTTPException(
@@ -168,7 +189,7 @@ async def upload(request: Request, title: str = "Uploaded recording"):
         raise HTTPException(
             408, "Upload took longer than 20 seconds. Retry on this local connection."
         ) from exc
-    return create_recording(bytes(data), title)
+    return create_recording(bytes(data), title, provider)
 
 
 @app.get("/api/recordings/{recording_id}", dependencies=[Depends(authorize)])
@@ -218,6 +239,30 @@ def delete(recording_id: UUID):
         (DATA / row["storage_name"]).unlink(missing_ok=True)
         db.execute("DELETE FROM recordings WHERE id=%s", (recording_id,))
     return Response(status_code=204)
+
+
+@app.post("/api/recordings/{recording_id}/retry", dependencies=[Depends(authorize)])
+def retry(recording_id: UUID):
+    with connect() as db:
+        row = recording(db, recording_id, lock=True)
+        if row["status"] not in {"failed", "cancelled"}:
+            raise HTTPException(
+                409, "Only failed or cancelled jobs can be retried explicitly."
+            )
+        if row["provider"] == "gemini" and (
+            os.getenv("CALLMAP_PROVIDER", "fixture") != "gemini"
+            or not os.getenv("GEMINI_API_KEY")
+        ):
+            raise HTTPException(
+                409, "Configure live Gemini before retrying this recording."
+            )
+        db.execute("DELETE FROM commitments WHERE recording_id=%s", (recording_id,))
+        db.execute(
+            "UPDATE recordings SET status='queued', error=NULL, segments='[]', provenance='{}', updated_at=now() WHERE id=%s",
+            (recording_id,),
+        )
+    wake_worker()
+    return {"status": "queued"}
 
 
 class Review(BaseModel):
@@ -270,19 +315,14 @@ def export(recording_id: UUID):
         if row["status"] != "ready":
             raise HTTPException(409, "Export is available after review becomes ready.")
         items = db.execute(
-            "SELECT text,owner,due_date,kind,segment_id FROM commitments WHERE recording_id=%s AND accepted=true ORDER BY segment_id",
+            "SELECT text,owner,due_date,kind,segment_id,source_quote,date_expression FROM commitments WHERE recording_id=%s AND accepted=true ORDER BY segment_id",
             (recording_id,),
         ).fetchall()
     # JSON download avoids spreadsheet formula injection and active HTML/Markdown.
     payload = {
         "title": row["title"],
-        "mode": "synthetic fixture; human reviewed",
-        "provenance": {
-            "source_sha256": row["sha256"],
-            "transcription": "authored-fixture-v1",
-            "extraction": "authored-fixture-v1",
-            "live_inference": False,
-        },
+        "mode": f"{row['provider']}; human reviewed",
+        "provenance": {"source_sha256": row["sha256"], **row["provenance"]},
         "items": items,
     }
     return Response(

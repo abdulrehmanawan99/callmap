@@ -205,3 +205,198 @@ def test_durable_job_review_export_cancellation_and_recovery(client):
     finally:
         process.terminate()
         process.wait(timeout=5)
+
+
+def test_live_pipeline_persistence_and_cancel_publish_guard(client, monkeypatch):
+    import httpx
+    from api import worker as jobs
+    from api.providers import Gemini
+    from api.tests.test_providers import TRANSCRIPT, ITEM, reply
+
+    monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(
+            200, json=reply(TRANSCRIPT if len(calls) % 2 else {"commitments": [ITEM]})
+        )
+
+    monkeypatch.setattr(
+        jobs,
+        "Gemini",
+        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(handler))),
+    )
+
+    def claim(rid):
+        with connect() as db:
+            return db.execute(
+                "UPDATE recordings SET status='transcribing' WHERE id=%s RETURNING *",
+                (rid,),
+            ).fetchone()
+
+    rid = client.post(
+        "/api/recordings/upload?provider=gemini",
+        content=wav(),
+        headers={"Content-Type": "audio/wav"},
+    ).json()["id"]
+    jobs.process(claim(rid))
+    row = client.get(f"/api/recordings/{rid}").json()
+    assert row["status"] == "ready" and row["provider"] == "gemini" and len(calls) == 2
+    assert row["commitments"][0]["source_quote"] == ITEM["source_quote"]
+    assert (
+        row["provenance"]["model"] == "gemini-3.8-flash"
+        and len(row["provenance"]["usage"]) == 2
+    )
+    assert client.post(f"/api/recordings/{rid}/retry").status_code == 409
+    # Cancellation during the HTTP call must suppress transcript/extraction publication.
+    cancelled = client.post(
+        "/api/recordings/upload?provider=gemini",
+        content=wav(),
+        headers={"Content-Type": "audio/wav"},
+    ).json()["id"]
+
+    def cancelling(request):
+        client.post(f"/api/recordings/{cancelled}/cancel")
+        return httpx.Response(200, json=reply(TRANSCRIPT))
+
+    monkeypatch.setattr(
+        jobs,
+        "Gemini",
+        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(cancelling))),
+    )
+    jobs.process(claim(cancelled))
+    row = client.get(f"/api/recordings/{cancelled}").json()
+    assert (
+        row["status"] == "cancelled"
+        and row["segments"] == []
+        and row["commitments"] == []
+    )
+    # Explicit retry is persisted; fixture jobs still never opt into Gemini implicitly.
+    assert client.post(f"/api/recordings/{cancelled}/retry").status_code == 200
+    assert client.get(f"/api/recordings/{cancelled}").json()["status"] == "queued"
+    sample = client.post("/api/recordings/sample").json()
+    assert sample["provider"] == "fixture"
+
+
+def test_live_error_and_deletion_during_extraction_never_publish(client, monkeypatch):
+    import httpx
+    from api import worker as jobs
+    from api.providers import Gemini
+    from api.tests.test_providers import TRANSCRIPT, ITEM, reply
+
+    # The environment default cannot silently turn fixture requests into external calls.
+    monkeypatch.setenv("CALLMAP_PROVIDER", "fixture")
+    assert (
+        client.post(
+            "/api/recordings/upload?provider=gemini",
+            content=wav(),
+            headers={"Content-Type": "audio/wav"},
+        ).status_code
+        == 409
+    )
+    monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
+
+    def create_and_claim():
+        rid = client.post(
+            "/api/recordings/upload?provider=gemini",
+            content=wav(),
+            headers={"Content-Type": "audio/wav"},
+        ).json()["id"]
+        with connect() as db:
+            row = db.execute(
+                "UPDATE recordings SET status='transcribing' WHERE id=%s RETURNING *",
+                (rid,),
+            ).fetchone()
+        return rid, row
+
+    rid, row = create_and_claim()
+    calls = []
+
+    def quota(request):
+        calls.append(1)
+        return (
+            httpx.Response(200, json=reply(TRANSCRIPT))
+            if len(calls) == 1
+            else httpx.Response(429, json={"private": "test-key-never-real"})
+        )
+
+    monkeypatch.setattr(
+        jobs,
+        "Gemini",
+        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(quota))),
+    )
+    jobs.process(row)
+    result = client.get(f"/api/recordings/{rid}").json()
+    assert (
+        result["status"] == "failed"
+        and result["commitments"] == []
+        and "quota" in result["error"]
+        and "test-key" not in result["error"]
+    )
+    assert len(calls) == 2
+    deleted, row = create_and_claim()
+    calls.clear()
+
+    def deleting(request):
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(200, json=reply(TRANSCRIPT))
+        assert client.delete(f"/api/recordings/{deleted}").status_code == 204
+        return httpx.Response(200, json=reply({"commitments": [ITEM]}))
+
+    monkeypatch.setattr(
+        jobs,
+        "Gemini",
+        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(deleting))),
+    )
+    jobs.process(row)
+    assert client.get(f"/api/recordings/{deleted}").status_code == 404
+    with connect() as db:
+        assert (
+            db.execute(
+                "SELECT count(*) AS n FROM commitments WHERE recording_id=%s",
+                (deleted,),
+            ).fetchone()["n"]
+            == 0
+        )
+
+
+def test_live_restart_fails_interrupted_job_without_replay(client, monkeypatch):
+    monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
+    rid = client.post(
+        "/api/recordings/upload?provider=gemini", content=wav(),
+        headers={"Content-Type": "audio/wav"},
+    ).json()["id"]
+    with connect() as db:
+        db.execute("UPDATE recordings SET status='extracting' WHERE id=%s", (rid,))
+    # Recovery must fail before invoking a provider, even with live configuration removed.
+    monkeypatch.setenv("CALLMAP_PROVIDER", "fixture")
+    monkeypatch.delenv("GEMINI_API_KEY")
+    process = worker()
+    try:
+        result = wait_for(client, rid, "failed")
+        assert "interrupted" in result["error"] and result["commitments"] == []
+        time.sleep(1.2)
+        assert client.get(f"/api/recordings/{rid}").json()["status"] == "failed"
+        assert client.post(f"/api/recordings/{rid}/retry").status_code == 409
+    finally:
+        process.terminate()
+        process.wait(timeout=5)
+
+
+def test_database_insert_failure_removes_private_upload(client, monkeypatch):
+    from api import main
+
+    before = set(DATA.glob("*.wav"))
+
+    def unavailable():
+        raise RuntimeError("Synthetic database failure")
+
+    monkeypatch.setattr(main, "connect", unavailable)
+    with pytest.raises(RuntimeError, match="Synthetic database failure"):
+        client.post("/api/recordings/upload", content=wav(), headers={"Content-Type": "audio/wav"})
+    assert set(DATA.glob("*.wav")) == before

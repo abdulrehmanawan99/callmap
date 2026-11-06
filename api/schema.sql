@@ -25,3 +25,10 @@ CREATE TABLE IF NOT EXISTS commitments (
 CREATE INDEX IF NOT EXISTS recordings_queue ON recordings (created_at) WHERE status = 'queued';
 CREATE INDEX IF NOT EXISTS commitments_recording ON commitments (recording_id);
 INSERT INTO schema_versions (version) VALUES (1) ON CONFLICT DO NOTHING;
+
+-- Version 2: per-recording opt-in provider and grounded source evidence.
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS provider text NOT NULL DEFAULT 'fixture' CHECK (provider IN ('fixture','gemini'));
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS provenance jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE commitments ADD COLUMN IF NOT EXISTS source_quote text NOT NULL DEFAULT '';
+ALTER TABLE commitments ADD COLUMN IF NOT EXISTS date_expression text NOT NULL DEFAULT '';
+INSERT INTO schema_versions (version) VALUES (2) ON CONFLICT DO NOTHING;

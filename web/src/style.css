@@ -1484,3 +1484,35 @@ kbd {
     transition: none !important;
   }
 }
+
+.live-optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #5f6d84;
+  margin: -10px 0 20px;
+}
+.live-optin input {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.source-evidence {
+  font-size: 9px;
+  color: #5f6d84;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.source-evidence summary {
+  cursor: pointer;
+}
+.source-evidence blockquote {
+  margin: 6px 0;
+  padding: 7px 10px;
+  border-left: 2px solid #dce5ff;
+  background: #f6f8ff;
+}
+.retry {
+  margin: 12px 0;
+}

@@ -33,6 +33,8 @@ type Item = {
   kind: "action" | "question";
   accepted: boolean;
   version: number;
+  source_quote: string;
+  date_expression: string;
 };
 type Recording = {
   id: string;
@@ -40,6 +42,7 @@ type Recording = {
   status: string;
   duration: number;
   fixture: boolean;
+  provider: "fixture" | "gemini";
   error: string | null;
   segments: Segment[];
   commitments?: Item[];
@@ -54,10 +57,10 @@ const stamp = (s: number) =>
     .padStart(2, "0")}`;
 const statuses: Record<string, string> = {
   queued: "Waiting for worker",
-  transcribing: "Loading fixture transcript",
-  extracting: "Mapping fixture commitments",
+  transcribing: "Transcribing audio",
+  extracting: "Mapping commitments",
   ready: "Ready for review",
-  failed: "Provider unavailable",
+  failed: "Job needs attention",
   cancelled: "Job cancelled",
 };
 function Editor({
@@ -107,6 +110,18 @@ function Editor({
         maxLength={600}
         onChange={(e) => setDraft({ ...draft, text: e.target.value })}
       />
+      {item.source_quote && (
+        <details className="source-evidence">
+          <summary>Exact source quotation</summary>
+          <blockquote>{item.source_quote}</blockquote>
+          {item.date_expression && (
+            <p>
+              Spoken date: {item.date_expression}
+              {!item.due_date ? " · unresolved" : ""}
+            </p>
+          )}
+        </details>
+      )}
       <div className="item-fields">
         <label>
           Owner
@@ -176,6 +191,14 @@ export default function App() {
   const [token, setToken] = useState(
     () => sessionStorage.getItem("callmap-token") || "",
   );
+  const [liveEnabled, setLiveEnabled] = useState(false),
+    [sendLive, setSendLive] = useState(false);
+  useEffect(() => {
+    void fetch("/api/health")
+      .then((r) => r.json())
+      .then((h) => setLiveEnabled(h.live_inference === true))
+      .catch(() => {});
+  }, []);
   const [tokenInput, setTokenInput] = useState(""),
     [connected, setConnected] = useState(false),
     [rows, setRows] = useState<Recording[]>([]);
@@ -367,7 +390,7 @@ export default function App() {
         throw new Error("Audio exceeds the 24 MiB limit.");
       const row = await (
         await request(
-          `/recordings/upload?title=${encodeURIComponent(chosen.name.slice(0, 120))}`,
+          `/recordings/upload?provider=${sendLive ? "gemini" : "fixture"}&title=${encodeURIComponent(chosen.name.slice(0, 120))}`,
           {
             method: "POST",
             headers: { "Content-Type": "audio/wav" },
@@ -377,6 +400,7 @@ export default function App() {
       ).json();
       setId(row.id);
       setCurrent(row);
+      setSendLive(false);
     });
   const save = (draft: Item, accepted: boolean) =>
     mutate(draft.id, async () => {
@@ -460,7 +484,7 @@ export default function App() {
         <div className="sidebar-footer">
           <i className="local-dot" />
           <span>
-            Local fixture mode<small>No audio leaves this device</small>
+            Fixture default<small>Live upload requires opt-in</small>
           </span>
         </div>
       </aside>
@@ -470,7 +494,10 @@ export default function App() {
             Workspace <ChevronRight size={13} /> <span>Conversations</span>
           </div>
           <span className="demo-pill">
-            <Radio size={12} /> SYNTHETIC DEMO
+            <Radio size={12} />{" "}
+            {current?.provider === "gemini"
+              ? "GEMINI · REVIEW REQUIRED"
+              : "SYNTHETIC DEMO"}
           </span>
         </header>
         <div className="page-content">
@@ -518,6 +545,21 @@ export default function App() {
               />
             </div>
           </div>
+          {connected && (
+            <label className="live-optin">
+              <input
+                type="checkbox"
+                checked={sendLive}
+                disabled={!liveEnabled || !!busy}
+                onChange={(e) => setSendLive(e.target.checked)}
+              />
+              <span>
+                {liveEnabled
+                  ? "Send the next uploaded WAV to Gemini (audio + transcript leave this device; 10 MiB limit). Load sample stays offline."
+                  : "Live provider is off. WAV uploads stay local; only the exact bundled sample has fixture results."}
+              </span>
+            </label>
+          )}
           {error && (
             <div className="error-banner" role="alert">
               <CircleHelp size={17} />
@@ -597,8 +639,8 @@ export default function App() {
               <div className="fixture-note">
                 An authored transcript and predefined extraction are available
                 only for the exact bundled sample. Arbitrary uploads require a
-                live provider, which is not configured. WAV only · 24 MiB · 2
-                minutes maximum.
+                live provider with explicit opt-in. Fixture uploads: WAV only ·
+                24 MiB · 2 minutes maximum.
               </div>
             </section>
           ) : !current ? (
@@ -618,9 +660,11 @@ export default function App() {
                       <i className={`status-dot ${current.status}`} />
                       {statuses[current.status]}{" "}
                       <span className="divider">/</span>{" "}
-                      {current.fixture
-                        ? "Synthetic sample · authored fixture"
-                        : "Uploaded audio · no live provider"}
+                      {current.provider === "gemini"
+                        ? "Gemini live · model suggestions need review"
+                        : current.fixture
+                          ? "Synthetic sample · authored fixture"
+                          : "Uploaded audio · no live provider"}
                     </div>
                   </div>
                   <div className="player-actions">
@@ -773,7 +817,9 @@ export default function App() {
                   <span>
                     {statuses[current.status]}…{" "}
                     <small>
-                      Fingerprint-gated fixture processing · no live inference
+                      {current.provider === "gemini"
+                        ? "Gemini audio/text request · cancellation suppresses results"
+                        : "Fingerprint-gated fixture processing · no live inference"}
                     </small>
                   </span>
                   <div className="job-steps">
@@ -782,6 +828,27 @@ export default function App() {
                     <span>03 Commitments</span>
                   </div>
                 </div>
+              )}
+              {["failed", "cancelled"].includes(current.status) && (
+                <button
+                  className="secondary retry"
+                  disabled={!!busy}
+                  onClick={() => {
+                    if (
+                      current.provider !== "gemini" ||
+                      window.confirm(
+                        "Retry sends this audio and transcript to Gemini again. Continue?",
+                      )
+                    )
+                      void mutate("retry", async () => {
+                        await request(`/recordings/${id}/retry`, {
+                          method: "POST",
+                        });
+                      });
+                  }}
+                >
+                  Retry job
+                </button>
               )}
               {current.status === "failed" && (
                 <div className="error-banner">
@@ -851,15 +918,21 @@ export default function App() {
                         <AudioLines size={29} />
                         <p>
                           {pending(current.status)
-                            ? "The fixture transcript will appear here."
+                            ? "The transcript will appear here."
                             : "No transcript is available for this recording."}
                         </p>
                       </div>
                     )}
                   </div>
                   <div className="panel-foot">
-                    <i className="local-dot" /> Authored transcript · speaker
-                    labels are fixture data
+                    <i className="local-dot" />{" "}
+                    {current.provider === "gemini"
+                      ? "Model transcript"
+                      : "Authored transcript"}{" "}
+                    · speaker
+                    {current.provider === "gemini"
+                      ? "labels and timestamps are model estimates"
+                      : "labels are fixture data"}
                   </div>
                 </section>
                 <section className="commitments-panel">
@@ -923,10 +996,12 @@ export default function App() {
               </div>
               <footer className="workspace-foot">
                 <span>
-                  <LockKeyhole size={12} /> Audio and reviews stay on this
-                  installation.
+                  <LockKeyhole size={12} />{" "}
+                  {current.provider === "gemini"
+                    ? "Live audio and transcript are sent to Gemini."
+                    : "Fixture audio and reviews stay on this installation."}
                 </span>
-                <span>Fixture suggestions need human review · JSON export</span>
+                <span>All suggestions need human review · JSON export</span>
               </footer>
             </>
           )}

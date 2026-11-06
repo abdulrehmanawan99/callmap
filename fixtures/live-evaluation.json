@@ -1,0 +1,14 @@
+{
+  "version": "callmap-dev-labels-v1",
+  "split": "development baseline; not held out",
+  "audio": "launch-checkin.wav",
+  "reference_manifest": "launch-checkin.json",
+  "expected": [
+    {"kind":"action","keywords":["onboarding","checklist"],"reference_segment":1,"due_date":"2026-11-12","owner":""},
+    {"kind":"action","keywords":["customer","interviews"],"reference_segment":2,"due_date":"2026-11-13","owner":""},
+    {"kind":"question","keywords":["analytics","review"],"reference_segment":3,"due_date":null,"owner":""},
+    {"kind":"action","keywords":["pilot","feedback","summary"],"reference_segment":5,"due_date":"2026-11-16","owner":""}
+  ],
+  "owner_note":"Names on the fixture UI are authored speaker roles; neither speaker identifies themself in the audio. Live extraction must leave I-will owners unassigned.",
+  "thresholds":null
+}

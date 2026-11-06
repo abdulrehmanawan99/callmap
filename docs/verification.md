@@ -1,20 +1,30 @@
-# Verification — 5 November 2026
+# Verification — 6 November 2026
 
-This records the **first fixture milestone**, not completion of the full portfolio PRD or live AI acceptance.
+The local fixture workflow and optional Gemini adapter are implemented. **Live compatibility and quality acceptance remain pending.** No key was read and no live inference, paid call, or model download was made for this work.
 
-Executed locally:
+## Current local checks
 
-- Generated a genuine **33.8-second, mono, 22.05 kHz, 16-bit PCM WAV** using macOS `say` (Samantha) and `afconvert`. Its committed manifest contains text/timestamps and SHA-256. No downloaded model or provider call.
-- `docker compose up -d --wait`: dedicated PostgreSQL 17.5 and Redis 7.4.3 containers started and became healthy. Only ports 55434/6382 and `callmap_*` volumes used.
-- `CALLMAP_TEST_DATABASE_URL=…/callmap_test .venv/bin/python -m pytest api/tests -q`: **9 passed** in 16.51 seconds after patched dependency updates. One upstream Starlette warning about the future `httpx2` TestClient transport; no test failure. Tests use a separate disposable database and real worker subprocess, not a mocked queue/database.
-- Domain coverage: exact sample fingerprint/timing consistency; arbitrary PCM cannot use fixture; duration/type/truncation/forged huge-frame bounds.
-- Integration coverage: auth and hostile Origin/Host; upload failures; sample → real worker → six segments/four items; private playable RIFF bytes; edit/accept/export; stale-review and cross-recording item conflicts; cancellation; unrelated-audio failure with zero claims; forced worker kill/restart with no duplicate commitments; persistence across worker restart; WAV removal and cascading review deletion.
-- `npm run build`: TypeScript strict/no-unused checks and Vite production build passed. Main bundle approximately 208 kB (66 kB gzip). No runtime CDN/font dependency.
-- `python -m pip check`: no broken requirements.
-- `npm audit`: initial Vite dev-server advisories fixed by exact pin 7.3.7; final audit reports zero vulnerabilities. FastAPI/Starlette updated to 0.162.0/1.10.0. `pip-audit` initially flagged pytest 8.3.5; upgraded to 9.0.3; final Python dependency audit reports no known vulnerabilities.
-- A GitHub Actions workflow is included for PostgreSQL/Redis integration tests, frontend build, and npm audit. It has not been executed remotely in this milestone.
-- Started API/worker/Vite using `scripts/dev.sh`; HTTP health endpoint reports fixture mode, UI returns HTTP 200.
+- `.venv/bin/python -m pytest api/tests -q`: **39 passed, 6 skipped**, one upstream Starlette warning about its deprecated httpx TestClient transport. The six skipped tests require the explicit disposable PostgreSQL database.
+- Offline checks cover PCM bounds/fingerprint gating; native Interactions HTTP request shape; timestamp ordering/IDs; exact quotations, explicit owner/date grounding; quota/auth/redirect/timeout/oversized/malformed responses; no automatic retries; fixture/key/model preflight; evaluation WER and no-call/error report accounting. HTTP responses are mocked: these checks do not establish actual model support.
+- `npm run build` with Node 24: strict TypeScript and Vite production build passed; JS **209.37 kB (66.60 kB gzip)**, CSS 19.57 kB (4.82 kB gzip).
+- Full `npm audit`: **0 vulnerabilities**. `python -m pip check`: no broken requirements. `pip-audit --disable-pip --no-deps -r requirements.lock` from a disposable audit environment: **no known vulnerabilities found**. Dependency audits are time-specific advisory checks.
+- `python -m compileall -q api scripts` and `git diff --check` passed.
+- Default `python -m scripts.evaluate_live --output docs/live-evaluation-blocked.json`: **blocked, zero HTTP attempts, no metrics/thresholds**. This is the committed current evaluation result, not a model score.
 
-Coordinator browser verification passed the core workflow: genuine playback and timestamp seek; review save/reload persistence; reviewed-only JSON download; deletion; no JavaScript errors; and no document overflow at 390 px. Real screenshots are in `docs/screenshots/desktop.png` and `mobile.png`. Initial axe scans found serious muted-text contrast issues. After the palette correction and patched-stack restart, final desktop and 390 px mobile axe WCAG 2 A/AA + 2.1 AA scans reported **zero violations**, with the core workflow rechecked and screenshots refreshed. Automated axe checks do not replace a complete accessibility audit. This agent's separate CUA attempt was unavailable; browser findings above come from the coordinator's actual browser run.
+## PostgreSQL integration boundary
 
-No WER, real extraction precision/recall, diarization, model compatibility, model latency, production load, public deployment, container-image security scan or complete license inventory, secure erasure, or fresh-checkout end-to-end acceptance is claimed. Current fixture dates are explicit authored dates in November 2026, not relative-date inference. The PRD's two-provider and live-media acceptance remains pending a selected authorized speech/text provider.
+Local Docker is unavailable: its backend fails to resize Docker.raw with permission denied. No Docker disk, user volume, or alternate database runtime was changed. Consequently **the updated integration suite was not executed locally in this pass**.
+
+The existing GitHub Actions workflow runs `pytest api/tests` against dedicated PostgreSQL 17.5/Redis 7.4.3 services and `callmap_test`. It discovers all six integration tests plus the offline provider/evaluation tests; no live key/call is needed. Remote results must be checked separately after push.
+
+Integration assertions cover upload/auth/origin/object boundaries; real fixture worker/restart; review version conflicts and reviewed-only export; cancellation and deletion; mocked live pipeline provenance; cancellation during transcription; sanitized extraction failure; deletion during extraction; interrupted live jobs fail without replay; and removal of a private upload when its database insertion fails. They truncate only a configured database ending in `_test`, use temporary audio, and stop their worker subprocesses.
+
+## Prior fixture evidence
+
+On 5 November the previous fixture milestone recorded **9 passed** using real local PostgreSQL/Redis and a real worker, plus a successful frontend build and dependency audits. The 33.8-second mono 22.05 kHz 16-bit WAV was generated using macOS `say`/`afconvert`; its authored manifest is fingerprint gated.
+
+The coordinator previously verified playback/seek, review save/reload, reviewed JSON download, deletion, no JavaScript errors, and no overflow at 390 px. After contrast fixes, desktop/mobile axe WCAG 2 A/AA + 2.1 AA scans reported zero violations. Existing screenshots in `docs/screenshots/` reflect that fixture UI. **The later opt-in/source-evidence/retry additions have passed compilation, but have not received a fresh browser/axe pass here.** Automated axe is not a full accessibility audit.
+
+## Remaining acceptance work
+
+An authorized billing-disabled Gemini project is required to establish actual API/model compatibility and a measured development baseline. Current labels use the authored sample and are not held out; approximate lexical matching requires manual review. Set acceptance thresholds after inspecting real results, then evaluate independent consented/synthetic audio. A second capable provider, live WER/precision/recall/timestamp quality, diarization, production load, hosted deployment, secure erasure, and fresh-checkout end-to-end acceptance are unverified. No claim of full PRD or two-provider acceptance is made.
