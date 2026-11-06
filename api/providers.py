@@ -250,6 +250,7 @@ class Gemini:
                         401: "Gemini rejected the API key.",
                         403: "Gemini access is denied for this key/project.",
                         429: "Gemini quota or rate limit reached. No automatic retry was made.",
+                        503: "Gemini is temporarily unavailable or under high demand. No automatic retry was made.",
                     }
                     raise ProviderError(
                         messages.get(

@@ -52,3 +52,7 @@ claimed. A second provider is outside the current exact-model authorization.
 The completed synthetic recording remains in the local app for inspection.
 The earlier [blocked report](live-evaluation-blocked.json) is historical no-call
 harness evidence, superseded for compatibility by this measured baseline.
+
+## Independent follow-up
+
+A [prospective three-case corpus and frozen gates](independent-validation.md) were added after this baseline. The first new transcription request returned HTTP503 high demand and the run stopped after one request; two cases remain unattempted. No independent quality pass or extra baseline score is claimed.

@@ -10,6 +10,12 @@ the application database. These include the new wire-schema/local-validation
 regression and sanitized HTTP400 handling. The actual successful synthetic live
 pipeline and reviewed-only export are recorded in [live validation](live-validation.md).
 
+## Independent quality follow-up
+
+The new [corpus, frozen gates and report](independent-validation.md) preserve a no-commitment case, named owner/calendar date, and unresolved relative dates. The first new exact-model transcription returned HTTP503; one request was made and no further live calls followed. Independent quality remains **blocked**, with zero measured cases and no invented scores.
+
+The expanded suite passed **61 tests** against dedicated `callmap_test` before the final offline-runner-default regression was added; the focused evaluation suite was rerun afterward. Corpus/scoring checks cover empty ground truth, invented owner/date, unmeasured cases, waveform fingerprints and a default no-HTTP resume plan. Fixed HTTP503 handling is sanitized and never retries. Compilation and whitespace checks passed.
+
 ## Prior local checks
 
 The model-only migration pins `gemini-3.5-flash-lite` and rejects all other IDs, including aliases, before HTTP. Official model/Interactions/audio/structured-output docs were rechecked on 6 November; audio input and structured text output are documented. Thinking uses the documented `minimal` default. The coordinator owns the authorized key and live validation; this migration read no secret and made no live calls.

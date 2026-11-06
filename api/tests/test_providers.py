@@ -115,7 +115,7 @@ def test_serving_schema_omits_state_exploding_bounds_but_local_validation_keeps_
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("status", [400, 401, 403, 429, 500, 302])
+@pytest.mark.parametrize("status", [400, 401, 403, 429, 500, 503, 302])
 def test_errors_are_secret_free_and_not_retried(live_env, status):
     calls = []
 
@@ -132,6 +132,8 @@ def test_errors_are_secret_free_and_not_retried(live_env, status):
     assert "private transcript" not in str(error.value) and "test-key" not in str(
         error.value
     )
+    if status == 503:
+        assert "temporarily unavailable" in str(error.value)
 
 
 @pytest.mark.parametrize(

@@ -14,12 +14,12 @@ CORPUS = ROOT / 'fixtures/independent'
 
 def assess(reference, result, gates):
     if result['status'] != 'ready':
-        return dict(passed=False, failures=['pipeline_not_ready'], status=result['status'])
+        failure = 'not_attempted' if result['status'] == 'not_attempted' else 'pipeline_not_ready'
+        return dict(passed=False, failures=[failure], status=result['status'])
     transcript = Transcript.model_validate({'segments': result['segments']}).validate_duration(reference['duration'])
     extraction = SimpleNamespace(model_dump=lambda **_: {'commitments': result['commitments']})
     metrics = score(reference, reference, transcript, extraction)
     limits = gates['per_recording']
-    failures = []
     checks = {
         'word_error_rate': metrics['wer'] <= limits['normalized_token_wer_max'],
         'mean_timestamp_boundary': metrics['timestamp_mean_boundary_error_seconds'] <= limits['mean_boundary_error_seconds_max'],
@@ -48,8 +48,23 @@ def main():
         reference = json.loads((CORPUS / filename).read_text())
         if hashlib.sha256((CORPUS / reference['audio']).read_bytes()).hexdigest() != reference['sha256']:
             raise ValueError('Independent corpus source fingerprint mismatch')
-        cases[reference['id']] = dict(source_sha256=reference['sha256'], **assess(reference, results[reference['id']], gates))
-    report = dict(corpus=corpus['version'], gates_version=gates['version'], scoring_only_no_requests=True, all_gates_passed=all(case['passed'] for case in cases.values()), cases=cases)
+        result = results.get(reference['id'], {'status': 'not_attempted'})
+        cases[reference['id']] = dict(source_sha256=reference['sha256'], **assess(reference, result, gates))
+    measured = sum('metrics' in case for case in cases.values())
+    passed = all(case['passed'] for case in cases.values())
+    acceptance = 'not_established'
+    if measured == len(cases):
+        acceptance = 'passed_frozen_gates' if passed else 'failed_frozen_gates'
+    report = dict(
+        corpus=corpus['version'],
+        gates_version=gates['version'],
+        scoring_only_no_requests=True,
+        measured_cases=measured,
+        total_cases=len(cases),
+        quality_acceptance=acceptance,
+        all_gates_passed=passed,
+        cases=cases,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))

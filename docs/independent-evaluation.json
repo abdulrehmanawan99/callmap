@@ -1,0 +1,35 @@
+{
+  "corpus": "callmap-independent-synthetic-v1",
+  "gates_version": "callmap-independent-gates-v1",
+  "scoring_only_no_requests": true,
+  "measured_cases": 0,
+  "total_cases": 3,
+  "quality_acceptance": "not_established",
+  "all_gates_passed": false,
+  "cases": {
+    "background-only": {
+      "source_sha256": "82b417b107cbcea5c84ea53e55aff42562269cdccfced76b7d92321145ad8b0e",
+      "passed": false,
+      "failures": [
+        "pipeline_not_ready"
+      ],
+      "status": "failed"
+    },
+    "named-calendar": {
+      "source_sha256": "2fbcdf15feb1c342f36e4f6496d794b82bbf312d4b0849208d442af2318d4f00",
+      "passed": false,
+      "failures": [
+        "not_attempted"
+      ],
+      "status": "not_attempted"
+    },
+    "relative-open": {
+      "source_sha256": "6a8e93d733ae6bc149fff3f64a439c25724d8685412b6bba73779efc94c1d422",
+      "passed": false,
+      "failures": [
+        "not_attempted"
+      ],
+      "status": "not_attempted"
+    }
+  }
+}
