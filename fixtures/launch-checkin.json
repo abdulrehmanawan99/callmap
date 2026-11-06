@@ -1,0 +1,80 @@
+{
+  "title": "Pilot launch \u00b7 Thursday check-in",
+  "sha256": "d7c9b5181d5502e39933fe0e472813fd1add1609fd9b5302df2e88693213a69c",
+  "duration": 33.791,
+  "provenance": "Locally synthesized with macOS say / Samantha. Transcript is authored fixture data, not speech recognition.",
+  "segments": [
+    {
+      "id": 0,
+      "speaker": "Maya",
+      "text": "Thanks for joining the launch check in. We are aiming for a small pilot, not a public release.",
+      "start": 0,
+      "end": 5.412
+    },
+    {
+      "id": 1,
+      "speaker": "Leo",
+      "text": "I will send the revised onboarding checklist to Maya by November twelfth, twenty twenty six.",
+      "start": 5.912,
+      "end": 11.272
+    },
+    {
+      "id": 2,
+      "speaker": "Maya",
+      "text": "Great. I will book three customer interviews by November thirteenth, twenty twenty six.",
+      "start": 11.772,
+      "end": 17.007
+    },
+    {
+      "id": 3,
+      "speaker": "Leo",
+      "text": "The analytics event names still need a decision. Who owns the final review?",
+      "start": 17.507,
+      "end": 21.673
+    },
+    {
+      "id": 4,
+      "speaker": "Maya",
+      "text": "That is unresolved. Let us leave the owner open until the product review.",
+      "start": 22.173,
+      "end": 26.131
+    },
+    {
+      "id": 5,
+      "speaker": "Leo",
+      "text": "I will prepare the pilot feedback summary by November sixteenth, twenty twenty six. That is everything from me.",
+      "start": 26.631,
+      "end": 33.291
+    }
+  ],
+  "commitments": [
+    {
+      "segment_id": 1,
+      "text": "Send the revised onboarding checklist to Maya",
+      "owner": "Leo",
+      "due_date": "2026-11-12",
+      "kind": "action"
+    },
+    {
+      "segment_id": 2,
+      "text": "Book three customer interviews",
+      "owner": "Maya",
+      "due_date": "2026-11-13",
+      "kind": "action"
+    },
+    {
+      "segment_id": 3,
+      "text": "Who owns the final analytics event-name review?",
+      "owner": "",
+      "due_date": null,
+      "kind": "question"
+    },
+    {
+      "segment_id": 5,
+      "text": "Prepare the pilot feedback summary",
+      "owner": "Leo",
+      "due_date": "2026-11-16",
+      "kind": "action"
+    }
+  ]
+}
