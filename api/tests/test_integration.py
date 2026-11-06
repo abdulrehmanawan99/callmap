@@ -226,7 +226,7 @@ def test_live_pipeline_persistence_and_cancel_publish_guard(client, monkeypatch)
     monkeypatch.setattr(
         jobs,
         "Gemini",
-        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(handler))),
+        lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler))),
     )
 
     def claim(rid):
@@ -264,7 +264,7 @@ def test_live_pipeline_persistence_and_cancel_publish_guard(client, monkeypatch)
     monkeypatch.setattr(
         jobs,
         "Gemini",
-        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(cancelling))),
+        lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(cancelling))),
     )
     jobs.process(claim(cancelled))
     row = client.get(f"/api/recordings/{cancelled}").json()
@@ -326,7 +326,7 @@ def test_live_error_and_deletion_during_extraction_never_publish(client, monkeyp
     monkeypatch.setattr(
         jobs,
         "Gemini",
-        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(quota))),
+        lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(quota))),
     )
     jobs.process(row)
     result = client.get(f"/api/recordings/{rid}").json()
@@ -350,7 +350,7 @@ def test_live_error_and_deletion_during_extraction_never_publish(client, monkeyp
     monkeypatch.setattr(
         jobs,
         "Gemini",
-        lambda: Gemini(httpx.Client(transport=httpx.MockTransport(deleting))),
+        lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(deleting))),
     )
     jobs.process(row)
     assert client.get(f"/api/recordings/{deleted}").status_code == 404
@@ -400,3 +400,47 @@ def test_database_insert_failure_removes_private_upload(client, monkeypatch):
     with pytest.raises(RuntimeError, match="Synthetic database failure"):
         client.post("/api/recordings/upload", content=wav(), headers={"Content-Type": "audio/wav"})
     assert set(DATA.glob("*.wav")) == before
+
+
+@pytest.mark.parametrize("phase,fail", [("transcribing", False), ("transcribing", True), ("extracting", False), ("extracting", True)])
+def test_stale_attempt_cannot_publish_or_fail_same_status_successor(client, monkeypatch, phase, fail):
+    import httpx
+    from api import worker as jobs
+    from api.providers import Gemini
+    from api.tests.test_providers import TRANSCRIPT, ITEM, reply
+
+    monkeypatch.setenv("CALLMAP_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key-never-real")
+    rid = client.post(
+        "/api/recordings/upload?provider=gemini", content=wav(),
+        headers={"Content-Type": "audio/wav"},
+    ).json()["id"]
+    with connect() as db:
+        old = db.execute(
+            "UPDATE recordings SET status='transcribing', attempt=attempt+1 WHERE id=%s RETURNING *", (rid,)
+        ).fetchone()
+    calls, successor = [], []
+
+    def handler(request):
+        calls.append(1)
+        target_call = 1 if phase == "transcribing" else 2
+        if len(calls) == target_call:
+            # Simulate recovery/reclaim while the old HTTP request remains in flight.
+            # The new generation deliberately has exactly the same workflow status.
+            with connect() as db:
+                successor.append(db.execute(
+                    "UPDATE recordings SET attempt=attempt+1 WHERE id=%s RETURNING *", (rid,)
+                ).fetchone())
+            if fail:
+                return httpx.Response(429)
+        return httpx.Response(200, json=reply(TRANSCRIPT if len(calls) == 1 else {"commitments": [ITEM]}))
+
+    monkeypatch.setattr(jobs, "Gemini", lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler))))
+    jobs.process(old)
+    assert len(calls) == (1 if phase == "transcribing" else 2)
+    with connect() as db:
+        current = db.execute("SELECT * FROM recordings WHERE id=%s", (rid,)).fetchone()
+        count = db.execute("SELECT count(*) AS n FROM commitments WHERE recording_id=%s", (rid,)).fetchone()["n"]
+    assert current == successor[0] and current["status"] == phase
+    assert count == 0
+    assert not jobs.still_active(rid, phase, old["attempt"])

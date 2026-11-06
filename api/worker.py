@@ -19,12 +19,12 @@ def stop(*_):
     STOP = True
 
 
-def still_active(recording_id, status):
+def still_active(recording_id, status, attempt):
     if STOP:
         return False
     with connect() as db:
         row = db.execute(
-            "SELECT status FROM recordings WHERE id=%s", (recording_id,)
+            "SELECT status FROM recordings WHERE id=%s AND attempt=%s", (recording_id, attempt)
         ).fetchone()
     return bool(row and row["status"] == status)
 
@@ -32,8 +32,9 @@ def still_active(recording_id, status):
 def process(recording):
     """No external calls for fixture jobs; cancellation wins all result writes."""
     rid = recording["id"]
+    attempt = recording["attempt"]
     try:
-        if not still_active(rid, "transcribing"):
+        if not still_active(rid, "transcribing", attempt):
             return
         if recording["provider"] == "gemini":
             path = DATA / recording["storage_name"]
@@ -47,7 +48,7 @@ def process(recording):
                     "Stored audio fingerprint changed. Upload the original again; no provider call was made."
                 )
             provider = Gemini()
-            if not still_active(rid, "transcribing"):
+            if not still_active(rid, "transcribing", attempt):
                 return
             transcript = provider.transcribe(data, recording["duration"])
             segments = transcript.model_dump()["segments"]
@@ -71,10 +72,10 @@ def process(recording):
             }
         with connect() as db:
             changed = db.execute(
-                "UPDATE recordings SET status='extracting', segments=%s, provenance=%s, updated_at=now() WHERE id=%s AND status='transcribing' RETURNING id",
-                (Jsonb(segments), Jsonb(provenance), rid),
+                "UPDATE recordings SET status='extracting', segments=%s, provenance=%s, updated_at=now() WHERE id=%s AND attempt=%s AND status='transcribing' RETURNING id",
+                (Jsonb(segments), Jsonb(provenance), rid, attempt),
             ).fetchone()
-        if not changed or not still_active(rid, "extracting"):
+        if not changed or not still_active(rid, "extracting", attempt):
             return
         if recording["provider"] == "gemini":
             commitments = [
@@ -94,7 +95,7 @@ def process(recording):
             ]
         with connect() as db:
             current = db.execute(
-                "SELECT status FROM recordings WHERE id=%s FOR UPDATE", (rid,)
+                "SELECT status FROM recordings WHERE id=%s AND attempt=%s FOR UPDATE", (rid, attempt)
             ).fetchone()
             if STOP or not current or current["status"] != "extracting":
                 return
@@ -114,8 +115,8 @@ def process(recording):
                     ),
                 )
             db.execute(
-                "UPDATE recordings SET status='ready', provenance=%s, updated_at=now() WHERE id=%s",
-                (Jsonb(provenance), rid),
+                "UPDATE recordings SET status='ready', provenance=%s, updated_at=now() WHERE id=%s AND attempt=%s",
+                (Jsonb(provenance), rid, attempt),
             )
     except (ValueError, OSError) as exc:
         message = (
@@ -125,8 +126,8 @@ def process(recording):
         )
         with connect() as db:
             db.execute(
-                "UPDATE recordings SET status='failed', error=%s, updated_at=now() WHERE id=%s AND status IN ('transcribing','extracting')",
-                (message, rid),
+                "UPDATE recordings SET status='failed', error=%s, updated_at=now() WHERE id=%s AND attempt=%s AND status IN ('transcribing','extracting')",
+                (message, rid, attempt),
             )
 
 
@@ -141,11 +142,11 @@ def run():
         leader.commit()
         with connect() as db:
             db.execute(
-                "UPDATE recordings SET status='queued', segments='[]', updated_at=now() WHERE provider='fixture' AND status IN ('transcribing','extracting')"
+                "UPDATE recordings SET status='queued', attempt=attempt+1, segments='[]', updated_at=now() WHERE provider='fixture' AND status IN ('transcribing','extracting')"
             )
         with connect() as db:
             db.execute(
-                "UPDATE recordings SET status='failed', error='Live job was interrupted. Retry explicitly; the prior provider request may have completed.', updated_at=now() WHERE provider='gemini' AND status IN ('transcribing','extracting')"
+                "UPDATE recordings SET status='failed', attempt=attempt+1, error='Live job was interrupted. Retry explicitly; the prior provider request may have completed.', updated_at=now() WHERE provider='gemini' AND status IN ('transcribing','extracting')"
             )
         wake = redis.Redis.from_url(
             REDIS_URL, socket_connect_timeout=0.5, socket_timeout=2
@@ -163,10 +164,10 @@ def run():
                     "SELECT * FROM recordings WHERE status='queued' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1"
                 ).fetchone()
                 if row:
-                    db.execute(
-                        "UPDATE recordings SET status='transcribing', updated_at=now() WHERE id=%s",
+                    row = db.execute(
+                        "UPDATE recordings SET status='transcribing', attempt=attempt+1, updated_at=now() WHERE id=%s RETURNING *",
                         (row["id"],),
-                    )
+                    ).fetchone()
             if row:
                 process(row)
             else:

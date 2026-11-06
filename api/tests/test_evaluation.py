@@ -24,7 +24,7 @@ def test_blocked_evaluation_counts_only_http_attempts(monkeypatch, tmp_path, all
         calls.append(1)
         return httpx.Response(429, json={"private": "test-key-never-real"})
 
-    monkeypatch.setattr(evaluate_live, "Gemini", lambda: Gemini(httpx.Client(transport=httpx.MockTransport(handler))))
+    monkeypatch.setattr(evaluate_live, "Gemini", lambda: Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler))))
     output = tmp_path / "report.json"
     monkeypatch.setattr(sys, "argv", ["evaluate_live", "--output", str(output)] + (["--allow-external-synthetic-audio"] if allow else []))
     evaluate_live.main()

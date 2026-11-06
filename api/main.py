@@ -85,7 +85,7 @@ def public(row):
     return {
         key: value
         for key, value in row.items()
-        if key not in {"storage_name", "sha256"}
+        if key not in {"storage_name", "sha256", "attempt"}
     } | {"fixture": row["sha256"] == FIXTURE["sha256"]}
 
 
@@ -258,7 +258,7 @@ def retry(recording_id: UUID):
             )
         db.execute("DELETE FROM commitments WHERE recording_id=%s", (recording_id,))
         db.execute(
-            "UPDATE recordings SET status='queued', error=NULL, segments='[]', provenance='{}', updated_at=now() WHERE id=%s",
+            "UPDATE recordings SET status='queued', attempt=attempt+1, error=NULL, segments='[]', provenance='{}', updated_at=now() WHERE id=%s",
             (recording_id,),
         )
     wake_worker()

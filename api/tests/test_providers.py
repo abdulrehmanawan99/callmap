@@ -81,7 +81,7 @@ def test_native_interactions_audio_then_grounded_text_contract(live_env):
         assert len(body["input"]) == 1 and TEXT in body["input"][0]["text"]
         return httpx.Response(200, json=reply({"commitments": [ITEM]}))
 
-    provider = Gemini(httpx.Client(transport=httpx.MockTransport(handler)))
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     transcript = provider.transcribe(wav(), 1)
     result = provider.extract(transcript)
     assert result.commitments[0].due_date == date(2026, 11, 12)
@@ -99,7 +99,7 @@ def test_errors_are_secret_free_and_not_retried(live_env, status):
             status, json={"error": "private transcript test-key-never-real"}
         )
 
-    provider = Gemini(httpx.Client(transport=httpx.MockTransport(handler)))
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     with pytest.raises(ProviderError) as error:
         provider.transcribe(wav(), 1)
     assert len(calls) == 1
@@ -131,7 +131,7 @@ def test_errors_are_secret_free_and_not_retried(live_env, status):
     ],
 )
 def test_incomplete_invalid_oversized_outputs_are_rejected(live_env, response):
-    provider = Gemini(httpx.Client(transport=httpx.MockTransport(lambda _: response)))
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(lambda _: response)))
     with pytest.raises(ProviderError):
         provider.transcribe(wav(), 1)
 
@@ -140,7 +140,7 @@ def test_timeout_is_sanitized(live_env):
     def handler(request):
         raise httpx.ReadTimeout("secret test-key-never-real", request=request)
 
-    provider = Gemini(httpx.Client(transport=httpx.MockTransport(handler)))
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     with pytest.raises(ProviderError, match="transport"):
         provider.transcribe(wav(), 1)
 
@@ -212,7 +212,7 @@ def test_missing_key_and_oversized_inline_audio_do_not_call(live_env, monkeypatc
 
     from api.providers import MAX_LIVE_BYTES
 
-    provider = Gemini(httpx.Client(transport=httpx.MockTransport(forbidden)))
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(forbidden)))
     with pytest.raises(ProviderError, match="10 MiB"):
         provider.transcribe(bytes(MAX_LIVE_BYTES + 1), 120)
     monkeypatch.setenv("CALLMAP_GEMINI_MODEL", "unapproved-model")
@@ -226,3 +226,24 @@ def test_evaluation_wer_counts_insertions_deletions_and_substitutions():
     assert wer(["one", "two"], ["one", "three"]) == 0.5
     assert wer(["one", "two"], ["one"]) == 0.5
     assert wer(["one"], ["one", "extra"]) == 1
+
+
+def test_total_deadline_cancels_stalled_response_headers(live_env, monkeypatch):
+    import asyncio
+    from api import providers
+
+    monkeypatch.setattr(providers, "REQUEST_DEADLINE_SECONDS", 0.01)
+    cancelled = []
+
+    async def handler(request):
+        try:
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            cancelled.append(True)
+            raise
+        raise AssertionError("The total deadline should cancel the header wait")
+
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    with pytest.raises(ProviderError, match="deadline"):
+        provider.transcribe(wav(), 1)
+    assert cancelled == [True] and provider.http_attempts == 1

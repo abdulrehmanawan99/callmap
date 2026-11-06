@@ -32,3 +32,7 @@ ALTER TABLE recordings ADD COLUMN IF NOT EXISTS provenance jsonb NOT NULL DEFAUL
 ALTER TABLE commitments ADD COLUMN IF NOT EXISTS source_quote text NOT NULL DEFAULT '';
 ALTER TABLE commitments ADD COLUMN IF NOT EXISTS date_expression text NOT NULL DEFAULT '';
 INSERT INTO schema_versions (version) VALUES (2) ON CONFLICT DO NOTHING;
+
+-- Version 3: fence stale workers after retry/recovery, even when status repeats.
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS attempt bigint NOT NULL DEFAULT 0 CHECK (attempt >= 0);
+INSERT INTO schema_versions (version) VALUES (3) ON CONFLICT DO NOTHING;

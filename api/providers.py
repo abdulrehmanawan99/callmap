@@ -1,5 +1,6 @@
 """Stateless Gemini Interactions adapter. No SDK, tools, retries, or fallback."""
 
+import asyncio
 import base64
 from datetime import date
 import json
@@ -16,6 +17,7 @@ API_REVISION = "2026-05-20"
 MODEL = "gemini-3.8-flash"
 MAX_LIVE_BYTES = 10 * 1024 * 1024
 MAX_RESPONSE_BYTES = 512 * 1024
+REQUEST_DEADLINE_SECONDS = 65
 PROMPT_VERSION = "callmap-grounded-v2"
 
 
@@ -165,7 +167,7 @@ def explicit_date(expression: str):
 
 
 class Gemini:
-    def __init__(self, client: httpx.Client | None = None):
+    def __init__(self, client: httpx.AsyncClient | None = None):
         self.model = os.getenv("CALLMAP_GEMINI_MODEL", MODEL)
         if self.model != MODEL:
             raise ProviderError(
@@ -181,6 +183,9 @@ class Gemini:
         self.http_attempts = 0
 
     def generate(self, contents, schema):
+        return asyncio.run(self._generate(contents, schema))
+
+    async def _generate(self, contents, schema):
         payload = {
             "model": self.model,
             "input": contents,
@@ -197,7 +202,7 @@ class Gemini:
             raise ProviderError(
                 "Live request exceeds the 16 MiB inline budget. Use a smaller WAV."
             )
-        client = self.client or httpx.Client(
+        client = self.client or httpx.AsyncClient(
             timeout=httpx.Timeout(60, connect=10),
             follow_redirects=False,
             trust_env=False,
@@ -205,7 +210,7 @@ class Gemini:
         started = time.monotonic()
         try:
             self.http_attempts += 1
-            with client.stream(
+            async with asyncio.timeout(REQUEST_DEADLINE_SECONDS), client.stream(
                 "POST",
                 ENDPOINT,
                 headers={
@@ -228,11 +233,7 @@ class Gemini:
                         )
                     )
                 chunks = bytearray()
-                for chunk in response.iter_bytes():
-                    if time.monotonic() - started > 65:
-                        raise ProviderError(
-                            "Gemini exceeded the 65-second wall-clock budget."
-                        )
+                async for chunk in response.aiter_bytes():
                     if len(chunks) + len(chunk) > MAX_RESPONSE_BYTES:
                         raise ProviderError(
                             "Gemini response exceeds the 512 KiB budget."
@@ -272,6 +273,10 @@ class Gemini:
             return json.loads(output)
         except ProviderError:
             raise
+        except TimeoutError:
+            raise ProviderError(
+                "Gemini exceeded the 65-second request deadline. Retry explicitly."
+            ) from None
         except (
             httpx.HTTPError,
             ValueError,
@@ -284,7 +289,7 @@ class Gemini:
             ) from None
         finally:
             if self.client is None:
-                client.close()
+                await client.aclose()
 
     def transcribe(self, data: bytes, duration: float):
         if len(data) > MAX_LIVE_BYTES:
