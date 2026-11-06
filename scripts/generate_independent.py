@@ -36,7 +36,7 @@ def main():
         with wave.open(str(audio), 'wb') as output:
             output.setparams((1, 2, rate, 0, 'NONE', 'not compressed'))
             output.writeframes(b''.join(frames))
-        manifest = dict(id=name, audio=audio.name, sha256=hashlib.sha256(audio.read_bytes()).hexdigest(), duration=round(cursor, 3), segments=segments, expected=expected, provenance='Original synthetic speech: local macOS say Samantha 170 wpm; PCM afconvert; authored labels and word-boundary timing frozen before inference. No speaker-identification label is inferred from voice.')
+        manifest = dict(id=name, audio=audio.name, sha256=hashlib.sha256(audio.read_bytes()).hexdigest(), duration=round(cursor, 3), segments=segments, expected=expected, provenance='Original synthetic speech: local macOS say Samantha 170 wpm; PCM afconvert; authored labels and measured synthesized-utterance boundaries frozen before inference. No speaker-identification label is inferred from voice.')
         (TARGET / f'{name}.json').write_text(json.dumps(manifest, indent=2) + '\n')
         manifests.append(f'{name}.json')
     (TARGET / 'corpus.json').write_text(json.dumps(dict(version='callmap-independent-synthetic-v1', split='prospective independent synthetic cases; frozen before first inference, distinct from development recording', gates='gates.json', cases=manifests), indent=2) + '\n')
