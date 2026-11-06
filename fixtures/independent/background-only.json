@@ -1,0 +1,17 @@
+{
+  "id": "background-only",
+  "audio": "background-only.wav",
+  "sha256": "82b417b107cbcea5c84ea53e55aff42562269cdccfced76b7d92321145ad8b0e",
+  "duration": 6.131,
+  "segments": [
+    {
+      "id": 0,
+      "speaker": "Synthetic voice",
+      "text": "The blue folder contains last month's inventory figures. The wall clock is above the reception desk.",
+      "start": 0.0,
+      "end": 5.631
+    }
+  ],
+  "expected": [],
+  "provenance": "Original synthetic speech: local macOS say Samantha 170 wpm; PCM afconvert; authored labels and word-boundary timing frozen before inference. No speaker-identification label is inferred from voice."
+}
