@@ -2,7 +2,7 @@
 
 A private audio workspace for turning a conversation into a reviewed plan. A cobalt player and waveform sit above a synchronized transcript and editable commitment timeline.
 
-The default demo stays offline: the bundled 33.8-second WAV is genuine synthetic speech generated with macOS `say`, with authored transcript/suggestions gated by its exact SHA-256. An **optional implemented Gemini path** transcribes an opted-in WAV and extracts grounded commitments using two native HTTP calls. An actual exact-model synthetic workflow now passes; [development measurements and limits](docs/live-validation.md) distinguish this baseline from broader quality acceptance.
+The default demo stays offline: the bundled 33.8-second WAV is genuine synthetic speech generated with macOS `say`, with authored transcript/suggestions gated by its exact SHA-256. An **optional implemented Gemini path** transcribes an opted-in WAV and extracts grounded commitments using two native HTTP calls. An actual exact-model synthetic workflow now passes; [development measurements and limits](docs/live-validation.md) distinguish this baseline from broader quality acceptance. [Independent evaluation](docs/independent-validation.md) uses frozen gates and three new recordings; its initial request hit provider unavailability. [Release checks and attribution](docs/release-checks.md) and [release notes/troubleshooting](docs/release-notes.md) record the local scope.
 
 ![CallMap desktop workspace](docs/screenshots/desktop.png)
 

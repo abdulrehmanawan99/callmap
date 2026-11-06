@@ -72,8 +72,12 @@ def authorize(request: Request):
 
 
 def recording(db, recording_id, lock=False):
+    query = (
+        "SELECT * FROM recordings WHERE id=%s FOR UPDATE"
+        if lock else "SELECT * FROM recordings WHERE id=%s"
+    )
     row = db.execute(
-        "SELECT * FROM recordings WHERE id=%s" + (" FOR UPDATE" if lock else ""),
+        query,
         (recording_id,),
     ).fetchone()
     if not row:
