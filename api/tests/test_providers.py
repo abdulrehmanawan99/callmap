@@ -15,6 +15,7 @@ from api.providers import (
     ProviderError,
     Transcript,
     explicit_date,
+    generation_schema,
 )
 from api.tests.test_core import wav
 
@@ -91,7 +92,30 @@ def test_native_interactions_audio_then_grounded_text_contract(live_env):
     assert "unexpected" not in provider.usage[0]
 
 
-@pytest.mark.parametrize("status", [401, 403, 429, 500, 302])
+def test_serving_schema_omits_state_exploding_bounds_but_local_validation_keeps_them(live_env):
+    calls = []
+
+    def handler(request):
+        schema = json.loads(request.content)["response_format"]["schema"]
+        assert schema == generation_schema(Transcript.model_json_schema())
+        segment = schema["$defs"]["Segment"]
+        assert segment["properties"]["id"]["type"] == "integer"
+        assert segment["additionalProperties"] is False
+        assert "id" in segment["required"]
+        assert "maxItems" not in schema["properties"]["segments"]
+        assert "maximum" not in segment["properties"]["id"]
+        assert "maxLength" not in segment["properties"]["text"]
+        calls.append(1)
+        invalid = {"segments": [dict(TRANSCRIPT["segments"][0], text="x" * 2001)]}
+        return httpx.Response(200, json=reply(invalid))
+
+    provider = Gemini(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    with pytest.raises(ProviderError, match="typed output contract"):
+        provider.transcribe(wav(), 1)
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("status", [400, 401, 403, 429, 500, 302])
 def test_errors_are_secret_free_and_not_retried(live_env, status):
     calls = []
 
