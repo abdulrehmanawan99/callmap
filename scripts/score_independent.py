@@ -12,12 +12,30 @@ from scripts.evaluate_live import score
 CORPUS = ROOT / 'fixtures/independent'
 
 
+def exact_source(item, segments):
+    segment_id = item.get('segment_id')
+    quote = item.get('source_quote')
+    return (
+        type(segment_id) is int
+        and segment_id in segments
+        and isinstance(quote, str)
+        and bool(quote.strip())
+        and quote in segments[segment_id]
+    )
+
+
 def assess(reference, result, gates):
     if result['status'] != 'ready':
         failure = 'not_attempted' if result['status'] == 'not_attempted' else 'pipeline_not_ready'
         return dict(passed=False, failures=[failure], status=result['status'])
     transcript = Transcript.model_validate({'segments': result['segments']}).validate_duration(reference['duration'])
-    extraction = SimpleNamespace(model_dump=lambda **_: {'commitments': result['commitments']})
+    segments = {segment.id: segment.text for segment in transcript.segments}
+    # Malformed quotations fail the source check, without crashing lexical scoring.
+    scored_items = [
+        item | {'source_quote': item.get('source_quote') if isinstance(item.get('source_quote'), str) else ''}
+        for item in result['commitments']
+    ]
+    extraction = SimpleNamespace(model_dump=lambda **_: {'commitments': scored_items})
     metrics = score(reference, reference, transcript, extraction)
     limits = gates['per_recording']
     checks = {
@@ -29,7 +47,7 @@ def assess(reference, result, gates):
         'owner_agreement': metrics['extraction']['owner_matches'] == len(reference['expected']),
         'date_agreement': metrics['extraction']['date_matches'] == len(reference['expected']),
         'no_false_positive_in_empty_case': bool(reference['expected']) or not result['commitments'],
-        'exact_source_quotes': all(item['source_quote'] in result['segments'][item['segment_id']]['text'] for item in result['commitments']),
+        'exact_source_quotes': all(exact_source(item, segments) for item in result['commitments']),
     }
     failures = [name for name, passed in checks.items() if not passed]
     return dict(passed=not failures, failures=failures, checks=checks, metrics=metrics)
@@ -53,8 +71,11 @@ def main():
     measured = sum('metrics' in case for case in cases.values())
     passed = all(case['passed'] for case in cases.values())
     acceptance = 'not_established'
-    if measured == len(cases):
-        acceptance = 'passed_frozen_gates' if passed else 'failed_frozen_gates'
+    measured_failure = any('metrics' in case and not case['passed'] for case in cases.values())
+    if measured_failure:
+        acceptance = 'failed_frozen_gates'
+    elif passed:
+        acceptance = 'passed_frozen_gates'
     report = dict(
         corpus=corpus['version'],
         gates_version=gates['version'],
@@ -68,7 +89,8 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
+    return 1 if measured_failure else (0 if passed else 2)
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
