@@ -1,0 +1,8 @@
+{
+  "version": "lexical-contiguous-span-v2",
+  "numeric_gates": "gates.json (unchanged callmap-independent-gates-v1)",
+  "frozen_before_unseen_relative_open_inference": true,
+  "reason": "Post-hoc evaluator bug fix: the v1 single-segment matcher falsely penalized a reference utterance split into two model segments.",
+  "algorithm": "For each reference utterance, choose the contiguous model-segment span with maximum Jaccard overlap of normalized word sets. On a tie prefer fewer model segments, then earliest occurrence. Compare reference start/end against first span start/last span end. Do not invent word timestamps inside a merged model segment.",
+  "limitations": "Rescoring already-seen background audio is regression evidence, not a fresh held-out result. Original v1 gate failure is retained in docs/independent-resume.json. A model segment merging multiple reference utterances still lacks internal timing; report its errors rather than infer missing boundaries. Labels, audio hashes and numeric thresholds are unchanged."
+}

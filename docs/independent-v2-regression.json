@@ -1,0 +1,70 @@
+{
+  "corpus": "callmap-independent-synthetic-v1",
+  "gates_version": "callmap-independent-gates-v1",
+  "timestamp_metric_version": "lexical-contiguous-span-v2",
+  "scoring_only_no_requests": true,
+  "measured_cases": 1,
+  "total_cases": 3,
+  "quality_acceptance": "not_established",
+  "all_gates_passed": false,
+  "cases": {
+    "background-only": {
+      "source_sha256": "82b417b107cbcea5c84ea53e55aff42562269cdccfced76b7d92321145ad8b0e",
+      "passed": true,
+      "failures": [],
+      "checks": {
+        "word_error_rate": true,
+        "mean_timestamp_boundary": true,
+        "worst_timestamp_boundary": true,
+        "extraction_precision": true,
+        "extraction_recall": true,
+        "owner_agreement": true,
+        "date_agreement": true,
+        "no_false_positive_in_empty_case": true,
+        "exact_source_quotes": true
+      },
+      "metrics": {
+        "wer": 0.0,
+        "extraction": {
+          "true_positives": 0,
+          "predicted": 0,
+          "expected": 0,
+          "precision": 1,
+          "recall": 1,
+          "date_matches": 0,
+          "owner_matches": 0
+        },
+        "timestamp_errors": [
+          {
+            "reference_segment": 0,
+            "start_error_seconds": 0.0,
+            "end_error_seconds": 0.289,
+            "matched_segment_ids": [
+              0,
+              1
+            ]
+          }
+        ],
+        "timestamp_metric_version": "lexical-contiguous-span-v2",
+        "timestamp_mean_boundary_error_seconds": 0.144,
+        "method": "Normalized token Levenshtein WER; exact keyword/kind one-to-one extraction matching; lexical-contiguous-span-v2. Review split/merged segments and paraphrases manually."
+      }
+    },
+    "named-calendar": {
+      "source_sha256": "2fbcdf15feb1c342f36e4f6496d794b82bbf312d4b0849208d442af2318d4f00",
+      "passed": false,
+      "failures": [
+        "pipeline_not_ready"
+      ],
+      "status": "failed"
+    },
+    "relative-open": {
+      "source_sha256": "6a8e93d733ae6bc149fff3f64a439c25724d8685412b6bba73779efc94c1d422",
+      "passed": false,
+      "failures": [
+        "not_attempted"
+      ],
+      "status": "not_attempted"
+    }
+  }
+}
