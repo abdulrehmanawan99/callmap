@@ -5,6 +5,9 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -16,13 +19,13 @@ jobs:
           POSTGRES_USER: callmap
           POSTGRES_PASSWORD: callmap_local_only
           POSTGRES_DB: callmap_test
-        ports: [55434:5432]
+        ports: ["55434:5432"]
         options: >-
           --health-cmd "pg_isready -U callmap -d callmap_test"
           --health-interval 3s --health-timeout 3s --health-retries 20
       redis:
         image: redis:7.4.3-alpine
-        ports: [6382:6379]
+        ports: ["6382:6379"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
