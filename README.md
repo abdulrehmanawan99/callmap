@@ -2,7 +2,7 @@
 
 A private audio workspace for turning a conversation into a reviewed plan. A cobalt player and waveform sit above a synchronized transcript and editable commitment timeline.
 
-The default demo stays offline: the bundled 33.8-second WAV is genuine synthetic speech generated with macOS `say`, with authored transcript/suggestions gated by its exact SHA-256. An **optional implemented Gemini path** transcribes an opted-in WAV and extracts grounded commitments using two native HTTP calls. Live provider acceptance and measured quality are pending coordinator live validation/evaluation; mocked HTTP tests are not live AI evidence.
+The default demo stays offline: the bundled 33.8-second WAV is genuine synthetic speech generated with macOS `say`, with authored transcript/suggestions gated by its exact SHA-256. An **optional implemented Gemini path** transcribes an opted-in WAV and extracts grounded commitments using two native HTTP calls. An actual exact-model synthetic workflow now passes; [development measurements and limits](docs/live-validation.md) distinguish this baseline from broader quality acceptance.
 
 ![CallMap desktop workspace](docs/screenshots/desktop.png)
 
@@ -52,6 +52,6 @@ Integration checks **truncate only the explicitly selected `*_test` database**, 
 
 React/Vite/TypeScript; four small FastAPI modules; direct psycopg/PostgreSQL persistence; Redis wakeups; private local WAVs. [Architecture and provider boundary](docs/architecture.md), [threat model](docs/threat-model.md), [fixture manifest](fixtures/launch-checkin.json).
 
-Gemini 3.5 Flash-Lite is integrated through the current native **Interactions** API, with stateless requests and structured output validation. No live calls were made for this implementation. See [live setup, limits and evaluation](docs/live-provider.md). The default mode never sends audio externally; enabling Gemini still requires the upload checkbox, and **Load sample** always stays fixture-only.
+Gemini 3.5 Flash-Lite is integrated through the current native **Interactions** API, with stateless requests and structured output validation. The actual synthetic development workflow completed on this model; see [live validation](docs/live-validation.md). See [live setup, limits and evaluation](docs/live-provider.md). The default mode never sends audio externally; enabling Gemini still requires the upload checkbox, and **Load sample** always stays fixture-only.
 
 Live transcription/extraction quality, diarization, a second speech/text provider, held-out evaluation, and hosted deployment acceptance remain pending. The application has no cloud storage, accounts, customer contact, multitenancy, or automatic retries of provider failures. It assumes one trusted OS user.
