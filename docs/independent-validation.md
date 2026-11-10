@@ -1,6 +1,6 @@
 # Independent synthetic evaluation — 6 November 2026
 
-Independent quality acceptance is **not achieved**. The initial run hit HTTP503; a bounded resumed run measured one case, failed frozen automatic timestamp gates, and stopped when the next transcript failed local validation. Both attempts remain recorded. This does not replace the earlier successful [development baseline](live-validation.md).
+Independent quality acceptance is **not achieved**. The [final bounded run](#final-bounded-run) measured all three cases: **2 of 3 pass** the frozen gates and the named-owner/date case fails strict WER and owner checks. Earlier attempts (an HTTP503, then a validation stop) remain recorded below. This does not replace the earlier successful [development baseline](live-validation.md).
 
 ## Frozen plan and sources
 
@@ -33,13 +33,13 @@ The run stopped immediately. **One new generation request occurred**, below the 
   --output .local/independent-gates.json
 ```
 
-The runner's explicit `--allow-external-synthetic-audio` flag expresses deliberate external-send intent under the existing exact-model synthetic-test authorization. Resume only after service availability changes, with a documented bounded request budget. It uses only the fixed loopback API and existing server-side exact-model configuration. It checkpoints the recording ID before polling, skips every previously attempted case (including failures), waits at most 140 seconds per job, and stops on the first failure/cancellation. It never retries or resets the saved results. Retain the same results file; changing/removing it can lose the record of prior external sends. This attempt stopped at its first service failure and schedules no further calls. The existing user authorization persists; a future bounded run must retain these results and must not automatically retry the failed case.
+The runner's explicit `--allow-external-synthetic-audio` flag expresses deliberate external-send intent. Resume only after service availability changes, with a documented bounded request budget. It uses only the fixed loopback API and existing server-side exact-model configuration. It checkpoints the recording ID before polling, skips every previously attempted case (including failures), waits at most 140 seconds per job, and stops on the first failure/cancellation. It never retries or resets the saved results. Retain the same results file; changing/removing it can lose the record of prior external sends. This attempt stopped at its first service failure and schedules no further calls. A future bounded run must retain these results and must not automatically retry the failed case.
 
 Scorer exit codes are **0** when every measured case passes all gates, **1** for any measured quality failure (even if other cases remain unmeasured), and **2** when acceptance is not established with no measured failure and incomplete coverage. All outcomes still write their report. Exact source checks require an existing integer segment ID and a nonblank string quotation contained in that segment; negative or boolean IDs and malformed quotations fail the check.
 
 ## Bounded resume after availability recovered
 
-After a coordinator availability probe returned HTTP200, a new private session guard allowed at most **six additional requests** on the same exact model. Prior results/reports were copied and preserved. The failed background recording was explicitly retried **once using the same recording ID**, with no duplicate upload. The existing runner then uploaded only the still-unattempted named-calendar case.
+After an availability probe returned HTTP200, a new private session guard allowed at most **six additional requests** on the same exact model. Prior results/reports were copied and preserved. The failed background recording was explicitly retried **once using the same recording ID**, with no duplicate upload. The existing runner then uploaded only the still-unattempted named-calendar case.
 
 [Current machine-readable execution and gate report](independent-resume.json) records **three new HTTP200 responses**, four cumulative independent requests including the initial HTTP503, and these outcomes:
 
@@ -47,15 +47,15 @@ After a coordinator availability probe returned HTTP200, a new private session g
 - Named-calendar transcription returned HTTP200 but failed the local `ordering, IDs, or timestamps` validator. No transcript or commitments were published; extraction was never called. The invalid candidate was not retained, so the precise rejected field is unknown. This is a provider-output validation failure, not an HTTP availability failure or an extraction-quality measurement.
 - Relative-open remains **not attempted** because the runner stopped at the first pipeline failure. No failed/successful case was repeated to improve a score.
 
-Reported usage for all three resumed requests was **785 input / 228 output / 0 thought tokens**; request times were **2.239s, 1.114s and 2.054s**. The first two account for the background result; the third belongs to the rejected named-calendar transcript. Usage for the earlier HTTP503 remains unknown. The private guard is stopped after this session; no further calls are scheduled. Worker PID63156 is recorded in ignored `.local/live-processes.json`; API/UI were left intact.
+Reported usage for all three resumed requests was **785 input / 228 output / 0 thought tokens**; request times were **2.239s, 1.114s and 2.054s**. The first two account for the background result; the third belongs to the rejected named-calendar transcript. Usage for the earlier HTTP503 remains unknown. The private guard is stopped after this session; no further calls are scheduled.
 
 The latest scorer exits **1** for a measured frozen-gate failure, with **1/3 cases measured**, one pipeline validation failure and one not-attempted case. At the end of that run, labels, gates, source WAVs and the v1 scoring logic were unchanged. The versioned evaluator fix below retains this original failure rather than silently relabeling it.
 
-The HTTP503 UI error is now a fixed actionable temporary-unavailability message, with a regression proving one request and no retry. Offline scorer checks cover empty ground truth, invented owners/dates, unmeasured cases and source fingerprints. Broader quality, noisy speech, diarization and a second provider remain unverified; a second provider is outside the exact-model authorization.
+The HTTP503 UI error is now a fixed actionable temporary-unavailability message, with a regression proving one request and no retry. Offline scorer checks cover empty ground truth, invented owners/dates, unmeasured cases and source fingerprints. Broader quality, noisy speech, diarization and a second provider remain unverified; a second provider is out of scope for v1.
 
 ## Versioned timestamp metric correction
 
-The coordinator authorized a minimal evaluator bug fix after observing the split-segmentation failure. [Metric v2](../fixtures/independent/metric-v2.json) is frozen before any inference on the still-unseen relative-open case. It chooses the best **contiguous span** of model segments using the same normalized-word-set lexical overlap, preferring shorter then earlier spans on ties; it compares the first start and last end. It never invents internal word timings when one model segment merges multiple reference utterances. Split and merged-segment regressions cover both behaviors. Numeric thresholds, source labels and WAV hashes remain unchanged.
+A minimal evaluator bug fix was made after observing the split-segmentation failure. [Metric v2](../fixtures/independent/metric-v2.json) is frozen before any inference on the still-unseen relative-open case. It chooses the best **contiguous span** of model segments using the same normalized-word-set lexical overlap, preferring shorter then earlier spans on ties; it compares the first start and last end. It never invents internal word timings when one model segment merges multiple reference utterances. Split and merged-segment regressions cover both behaviors. Numeric thresholds, source labels and WAV hashes remain unchanged.
 
 The original [v1 failure](independent-resume.json) remains immutable historical evidence. [Offline v2 regression report](independent-v2-regression.json) uses the already persisted output, with **no new calls**: background WER0, zero false commitments, mean boundary error0.144s and end error0.289s pass the unchanged thresholds. This post-hoc correction is **seen-data regression evidence, not a fresh held-out pass**. Only1/3 cases is measured, so acceptance remains not established and the v2 scorer exits2. To reproduce v1, pass `--timestamp-metric lexical-single-segment-v1`; independent scoring defaults to the versioned contiguous-span v2.
 
@@ -65,4 +65,21 @@ Transcript failures now distinguish fixed non-secret reasons for non-consecutive
 
 One additional explicitly bounded transcription retry on the same named-calendar record returned HTTP200. A private wrapper retained parsed transcript content **only after the inline WAV hash matched the committed named-calendar SHA-256**; its output file is0600 and contains neither provider envelope nor key. It made no extraction request. Actual WAV duration was **5.055600907s**, the prompt displayed **5.056s**, and the model returned an end of **5.056s**: an overrun of **0.000399093s**. The more precise validator identified outside-duration rather than an ID/order error. Diagnostic usage was246 input/83 output/0 thought tokens, provider2.706s and app3.129s.
 
-This proves a rounding mismatch introduced by the three-decimal prompt duration. The fix canonicalizes **only** `0 < end - measured_duration <= 0.0005` seconds to exact measured duration and then rechecks all ordering/nonempty/end bounds. Larger errors still reject. Regressions cover this captured duration, too-large overruns, and a start that would become invalid after clamping. No quality threshold or source label changed. The existing captured response validates offline after this fix; that check made no new call. The coordinator separately capped the final named retry plus unseen relative case at four further HTTP requests; prior reports remain intact.
+This proves a rounding mismatch introduced by the three-decimal prompt duration. The fix canonicalizes **only** `0 < end - measured_duration <= 0.0005` seconds to exact measured duration and then rechecks all ordering/nonempty/end bounds. Larger errors still reject. Regressions cover this captured duration, too-large overruns, and a start that would become invalid after clamping. No quality threshold or source label changed. The existing captured response validates offline after this fix; that check made no new call. A separate budget capped the final named retry plus unseen relative case at four further HTTP requests; prior reports remain intact.
+
+## Final bounded run
+
+Within that four-request cap, the named-calendar retry and the unseen relative-open case completed (four HTTP200 responses, no retries). All three cases are now measured with the unchanged v1 gates and the frozen v2 timestamp metric. [Persisted API results](independent-final-results.json) and the [offline gate report](independent-final.json) are committed; rescoring makes no HTTP request:
+
+```sh
+.venv/bin/python -m scripts.score_independent \
+  --results docs/independent-final-results.json --output .local/independent-final.json
+```
+
+| Case | Result | Notes |
+| --- | --- | --- |
+| background-only | pass | WER 0, zero false commitments, mean boundary error 0.144s |
+| relative-open | pass | WER 0, 2/2 items, relative dates kept unresolved, mean boundary error 0.09s |
+| named-calendar | **fail** | WER 0.4167 (> 0.25) and owner mismatch: the model wrote "Norah" and "December 7th, 2026" for the spoken "Nora" / "December seventh, twenty twenty six". The date and action matched. |
+
+The scorer exits **1** (`quality_acceptance=failed_frozen_gates`). No label, gate or metric was changed after seeing these outputs. Three short synthetic recordings are not a representative benchmark.

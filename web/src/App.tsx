@@ -603,7 +603,7 @@ export default function App() {
                   <button className="primary">Open workspace →</button>
                 </div>
               </form>
-              <small>API :8012 · Workspace :5175 · No hosted account</small>
+              <small>Loopback only · No hosted account</small>
             </section>
           ) : !id ? (
             <section className="empty-workspace">

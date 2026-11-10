@@ -1,0 +1,189 @@
+{
+  "background-only": {
+    "id": "1883c165-6a67-4f87-8ef4-b9489303afe1",
+    "title": "Independent synthetic evaluation: background-only",
+    "duration": 6.131292517006803,
+    "status": "ready",
+    "segments": [
+      {
+        "id": 0,
+        "end": 2.87,
+        "text": "The blue folder contains last month's inventory figures.",
+        "start": 0.0,
+        "speaker": "Speaker 1"
+      },
+      {
+        "id": 1,
+        "end": 5.92,
+        "text": "The wall clock is above the reception desk.",
+        "start": 3.03,
+        "speaker": "Speaker 1"
+      }
+    ],
+    "error": null,
+    "created_at": "2026-11-06T18:21:27.363154+00:00",
+    "updated_at": "2026-11-06T18:35:06.880674+00:00",
+    "provider": "gemini",
+    "provenance": {
+      "model": "gemini-3.5-flash-lite",
+      "usage": [
+        {
+          "total_tokens": 408,
+          "latency_seconds": 2.239,
+          "total_input_tokens": 273,
+          "total_output_tokens": 135,
+          "total_thought_tokens": 0
+        },
+        {
+          "total_tokens": 276,
+          "latency_seconds": 1.114,
+          "total_input_tokens": 266,
+          "total_output_tokens": 10,
+          "total_thought_tokens": 0
+        }
+      ],
+      "provider": "gemini",
+      "api_revision": "2026-05-20",
+      "live_inference": true,
+      "prompt_version": "callmap-grounded-v2"
+    },
+    "fixture": false,
+    "commitments": []
+  },
+  "named-calendar": {
+    "id": "ea04f3cd-fa5c-4200-8270-864b62ec1e29",
+    "title": "Independent synthetic evaluation: named-calendar",
+    "duration": 5.055600907029478,
+    "status": "ready",
+    "segments": [
+      {
+        "id": 0,
+        "end": 5.055600907029478,
+        "text": "Norah will email the shipping summary by December 7th, 2026.",
+        "start": 0.0,
+        "speaker": "Speaker 1"
+      }
+    ],
+    "error": null,
+    "created_at": "2026-11-06T18:35:07.355620+00:00",
+    "updated_at": "2026-11-06T18:43:04.189250+00:00",
+    "provider": "gemini",
+    "provenance": {
+      "model": "gemini-3.5-flash-lite",
+      "usage": [
+        {
+          "total_tokens": 329,
+          "latency_seconds": 2.578,
+          "total_input_tokens": 246,
+          "total_output_tokens": 83,
+          "total_thought_tokens": 0
+        },
+        {
+          "total_tokens": 385,
+          "latency_seconds": 1.227,
+          "total_input_tokens": 251,
+          "total_output_tokens": 134,
+          "total_thought_tokens": 0
+        }
+      ],
+      "provider": "gemini",
+      "api_revision": "2026-05-20",
+      "live_inference": true,
+      "prompt_version": "callmap-grounded-v2"
+    },
+    "fixture": false,
+    "commitments": [
+      {
+        "id": "560ed060-4820-41f0-ae8e-656c66197094",
+        "recording_id": "ea04f3cd-fa5c-4200-8270-864b62ec1e29",
+        "segment_id": 0,
+        "text": "email the shipping summary",
+        "owner": "Norah",
+        "due_date": "2026-12-07",
+        "kind": "action",
+        "accepted": false,
+        "version": 1,
+        "source_quote": "Norah will email the shipping summary by December 7th, 2026.",
+        "date_expression": "December 7th, 2026"
+      }
+    ]
+  },
+  "relative-open": {
+    "id": "c9664474-ed5d-4d5a-9448-fea0907c9377",
+    "title": "Independent synthetic evaluation: relative-open",
+    "duration": 6.030249433106576,
+    "status": "ready",
+    "segments": [
+      {
+        "id": 0,
+        "end": 2.21,
+        "text": "I will update the warehouse roster tomorrow.",
+        "start": 0.0,
+        "speaker": "Speaker 1"
+      },
+      {
+        "id": 1,
+        "end": 5.47,
+        "text": "Who approves the replacement labels next Friday?",
+        "start": 2.65,
+        "speaker": "Speaker 1"
+      }
+    ],
+    "error": null,
+    "created_at": "2026-11-06T18:43:04.808268+00:00",
+    "updated_at": "2026-11-06T18:43:10.053203+00:00",
+    "provider": "gemini",
+    "provenance": {
+      "model": "gemini-3.5-flash-lite",
+      "usage": [
+        {
+          "total_tokens": 401,
+          "latency_seconds": 3.051,
+          "total_input_tokens": 270,
+          "total_output_tokens": 131,
+          "total_thought_tokens": 0
+        },
+        {
+          "total_tokens": 450,
+          "latency_seconds": 2.045,
+          "total_input_tokens": 262,
+          "total_output_tokens": 188,
+          "total_thought_tokens": 0
+        }
+      ],
+      "provider": "gemini",
+      "api_revision": "2026-05-20",
+      "live_inference": true,
+      "prompt_version": "callmap-grounded-v2"
+    },
+    "fixture": false,
+    "commitments": [
+      {
+        "id": "641bc4f3-1590-405a-ba04-27ac7274b88b",
+        "recording_id": "c9664474-ed5d-4d5a-9448-fea0907c9377",
+        "segment_id": 0,
+        "text": "I will update the warehouse roster tomorrow.",
+        "owner": "",
+        "due_date": null,
+        "kind": "action",
+        "accepted": false,
+        "version": 1,
+        "source_quote": "I will update the warehouse roster tomorrow.",
+        "date_expression": "tomorrow"
+      },
+      {
+        "id": "c2babdd4-9e35-42e1-907e-9cdd36a7fa19",
+        "recording_id": "c9664474-ed5d-4d5a-9448-fea0907c9377",
+        "segment_id": 1,
+        "text": "Who approves the replacement labels next Friday?",
+        "owner": "",
+        "due_date": null,
+        "kind": "question",
+        "accepted": false,
+        "version": 1,
+        "source_quote": "Who approves the replacement labels next Friday?",
+        "date_expression": "next Friday"
+      }
+    ]
+  }
+}
