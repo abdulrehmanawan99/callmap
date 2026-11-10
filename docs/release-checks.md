@@ -31,8 +31,8 @@ Actual local results for this continuation:
 - The locked Python dependency audit reported no known vulnerabilities; the
   frontend npm audit reported zero across all severities. These are dated advisory
   checks, not a security certification.
-- The repository/build secret-pattern scanner reports filenames only. The
-  coordinator can additionally supply a known value through `SECRET_SCAN_VALUE`
+- The repository/build secret-pattern scanner reports filenames only. A
+  maintainer can additionally supply a known value through `SECRET_SCAN_VALUE`
   without putting it in an argument or reading credentials inside the scanner.
   Private ignored runtime files, Git history, binary/OCR content and unknown
   credential formats are outside this bounded scan.

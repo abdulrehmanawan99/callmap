@@ -29,7 +29,7 @@ def main():
     }
     if args.include_build:
         paths.update(path for path in (ROOT / "web/dist").rglob("*") if path.is_file())
-    # Optional coordinator check: never read a key file or print this value.
+    # Optional maintainer check: never read a key file or print this value.
     exact = os.getenv("SECRET_SCAN_VALUE", "")
     findings = []
     scanned = 0

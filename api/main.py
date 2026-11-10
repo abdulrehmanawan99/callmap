@@ -27,7 +27,8 @@ from api.core import (
 )
 
 TOKEN = local_token()
-ORIGINS = {"http://localhost:5175", "http://127.0.0.1:5175"}
+WEB_PORT = os.getenv("CALLMAP_WEB_PORT", "5175")
+ORIGINS = {f"http://localhost:{WEB_PORT}", f"http://127.0.0.1:{WEB_PORT}"}
 
 
 @asynccontextmanager
