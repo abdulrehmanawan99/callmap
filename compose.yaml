@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: callmap
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-callmap_local_only}
       POSTGRES_DB: callmap
-    ports: ["127.0.0.1:55434:5432"]
+    ports: ["127.0.0.1:${CALLMAP_PG_PORT:-55434}:5432"]
     volumes: ["callmap_pg:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U callmap -d callmap"]
@@ -15,7 +15,7 @@ services:
       retries: 20
   redis:
     image: redis:7.4.3-alpine
-    ports: ["127.0.0.1:6382:6379"]
+    ports: ["127.0.0.1:${CALLMAP_REDIS_PORT:-6382}:6379"]
     command: ["redis-server", "--appendonly", "yes"]
     volumes: ["callmap_redis:/data"]
 volumes:

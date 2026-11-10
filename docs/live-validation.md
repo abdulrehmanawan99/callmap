@@ -48,7 +48,7 @@ persisted API result; scoring made no additional provider requests.
 
 The sample is a development fixture, not an independent held-out recording.
 Neither general quality acceptance nor diarization/two-provider coverage is
-claimed. A second provider is outside the current exact-model authorization.
+claimed. A second provider is out of scope for v1.
 The completed synthetic recording remains in the local app for inspection.
 The earlier [blocked report](live-evaluation-blocked.json) is historical no-call
 harness evidence, superseded for compatibility by this measured baseline.
