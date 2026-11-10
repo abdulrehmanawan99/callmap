@@ -157,3 +157,22 @@ def test_independent_score_cli_exit_statuses(tmp_path, mode, exit_code):
     if mode == 'partial-fail':
         assert report['quality_acceptance'] == 'failed_frozen_gates'
         assert report['measured_cases'] == 1
+
+
+def test_v2_timestamp_alignment_handles_split_reference_utterance():
+    from scripts.evaluate_live import aligned_timestamp_errors
+    reference = [dict(id=0, text='The folder is blue. The clock is red.', start=0, end=4)]
+    split = [dict(id=0, text='The folder is blue.', start=0, end=2), dict(id=1, text='The clock is red.', start=2, end=4)]
+    assert aligned_timestamp_errors(reference, split, 'lexical-single-segment-v1')[0]['end_error_seconds'] == 2
+    result = aligned_timestamp_errors(reference, split, 'lexical-contiguous-span-v2')[0]
+    assert result['start_error_seconds'] == result['end_error_seconds'] == 0
+    assert result['matched_segment_ids'] == [0, 1]
+
+
+def test_v2_merged_model_segment_does_not_invent_internal_timestamps():
+    from scripts.evaluate_live import aligned_timestamp_errors
+    reference = [dict(id=0, text='The folder is blue.', start=0, end=2), dict(id=1, text='The clock is red.', start=2, end=4)]
+    merged = [dict(id=0, text='The folder is blue. The clock is red.', start=0, end=4)]
+    result = aligned_timestamp_errors(reference, merged, 'lexical-contiguous-span-v2')
+    assert result[0]['end_error_seconds'] == result[1]['start_error_seconds'] == 2
+    assert all(item['matched_segment_ids'] == [0] for item in result)

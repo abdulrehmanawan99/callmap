@@ -24,7 +24,7 @@ def exact_source(item, segments):
     )
 
 
-def assess(reference, result, gates):
+def assess(reference, result, gates, timestamp_metric='lexical-contiguous-span-v2'):
     if result['status'] != 'ready':
         failure = 'not_attempted' if result['status'] == 'not_attempted' else 'pipeline_not_ready'
         return dict(passed=False, failures=[failure], status=result['status'])
@@ -36,7 +36,7 @@ def assess(reference, result, gates):
         for item in result['commitments']
     ]
     extraction = SimpleNamespace(model_dump=lambda **_: {'commitments': scored_items})
-    metrics = score(reference, reference, transcript, extraction)
+    metrics = score(reference, reference, transcript, extraction, timestamp_metric)
     limits = gates['per_recording']
     checks = {
         'word_error_rate': metrics['wer'] <= limits['normalized_token_wer_max'],
@@ -57,6 +57,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--results', type=Path, required=True, help='JSON mapping case IDs to persisted API detail objects')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--timestamp-metric', choices=['lexical-single-segment-v1', 'lexical-contiguous-span-v2'], default='lexical-contiguous-span-v2')
     args = parser.parse_args()
     corpus = json.loads((CORPUS / 'corpus.json').read_text())
     gates = json.loads((CORPUS / corpus['gates']).read_text())
@@ -67,7 +68,7 @@ def main():
         if hashlib.sha256((CORPUS / reference['audio']).read_bytes()).hexdigest() != reference['sha256']:
             raise ValueError('Independent corpus source fingerprint mismatch')
         result = results.get(reference['id'], {'status': 'not_attempted'})
-        cases[reference['id']] = dict(source_sha256=reference['sha256'], **assess(reference, result, gates))
+        cases[reference['id']] = dict(source_sha256=reference['sha256'], **assess(reference, result, gates, args.timestamp_metric))
     measured = sum('metrics' in case for case in cases.values())
     passed = all(case['passed'] for case in cases.values())
     acceptance = 'not_established'
@@ -79,6 +80,7 @@ def main():
     report = dict(
         corpus=corpus['version'],
         gates_version=gates['version'],
+        timestamp_metric_version=args.timestamp_metric,
         scoring_only_no_requests=True,
         measured_cases=measured,
         total_cases=len(cases),
