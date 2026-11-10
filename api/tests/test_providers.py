@@ -282,3 +282,29 @@ def test_only_exact_authorized_model_is_accepted(live_env, monkeypatch, model):
     monkeypatch.setenv("CALLMAP_GEMINI_MODEL", model)
     with pytest.raises(ProviderError, match="Unsupported"):
         Gemini()
+
+
+@pytest.mark.parametrize('patch,message', [
+    ({'id': 1}, 'non-consecutive'),
+    ({'start': .8, 'end': .7}, 'unordered'),
+    ({'end': 1.001}, 'measured WAV duration'),
+])
+def test_transcript_validation_reasons_are_fixed_and_precise(patch, message):
+    transcript = Transcript.model_validate({'segments': [TRANSCRIPT['segments'][0] | patch]})
+    with pytest.raises(ProviderError, match=message):
+        transcript.validate_duration(1)
+
+
+def test_millisecond_prompt_rounding_is_canonicalized_to_exact_wav_end():
+    duration = 5.055600907029478
+    transcript = Transcript.model_validate({'segments': [TRANSCRIPT['segments'][0] | {'end': 5.056}]})
+    result = transcript.validate_duration(duration)
+    assert result.segments[0].end == duration
+    assert result.segments[0].start < result.segments[0].end
+
+
+@pytest.mark.parametrize('start,end,message', [(0, 5.0562, 'measured WAV duration'), (5.0557, 5.056, 'unordered')])
+def test_rounding_canonicalization_rejects_larger_overrun_or_empty_interval(start, end, message):
+    transcript = Transcript.model_validate({'segments': [TRANSCRIPT['segments'][0] | {'start': start, 'end': end}]})
+    with pytest.raises(ProviderError, match=message):
+        transcript.validate_duration(5.055600907029478)

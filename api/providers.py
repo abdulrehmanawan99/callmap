@@ -18,6 +18,7 @@ MODEL = "gemini-3.5-flash-lite"
 MAX_LIVE_BYTES = 10 * 1024 * 1024
 MAX_RESPONSE_BYTES = 512 * 1024
 REQUEST_DEADLINE_SECONDS = 65
+WAV_END_ROUNDING_SECONDS = 0.0005  # Prompt duration is rounded to milliseconds.
 PROMPT_VERSION = "callmap-grounded-v2"
 
 
@@ -65,12 +66,20 @@ class Transcript(BaseModel):
     def validate_duration(self, duration: float):
         previous = 0.0
         for i, segment in enumerate(self.segments):
-            if (
-                segment.id != i
-                or not previous <= segment.start < segment.end <= duration
-            ):
+            if segment.id != i:
                 raise ProviderError(
-                    "Provider transcript has invalid ordering, IDs, or timestamps. Retry or review another recording."
+                    "Provider transcript has non-consecutive segment IDs. No transcript was accepted."
+                )
+            if segment.end > duration:
+                if segment.end - duration > WAV_END_ROUNDING_SECONDS:
+                    raise ProviderError(
+                        "Provider transcript timestamp exceeds the measured WAV duration. No transcript was accepted."
+                    )
+                # Canonicalize only the half-millisecond introduced by .3f in the prompt.
+                segment.end = duration
+            if not previous <= segment.start < segment.end <= duration:
+                raise ProviderError(
+                    "Provider transcript has overlapping or unordered timestamps. No transcript was accepted."
                 )
             if not segment.text.strip() or not segment.speaker.strip():
                 raise ProviderError(

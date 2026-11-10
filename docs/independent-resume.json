@@ -1,0 +1,135 @@
+{
+  "session": "independent-resume-2",
+  "evaluated_at": "2026-11-06T18:35:09.623587+00:00",
+  "model": "gemini-3.5-flash-lite",
+  "prior_independent_attempt": {
+    "http_requests": 1,
+    "http_status": 503,
+    "report": "independent-evaluation.json",
+    "usage": null
+  },
+  "resumed_execution": {
+    "maximum_http_requests": 6,
+    "actual_http_requests": 3,
+    "http_statuses": [
+      200,
+      200,
+      200
+    ],
+    "cumulative_independent_http_requests": 4,
+    "background_only": {
+      "explicit_retry_of_same_recording": true,
+      "status": "ready",
+      "app_elapsed_seconds": 3.641,
+      "published_segments": 2,
+      "published_commitments": 0
+    },
+    "named_calendar": {
+      "status": "failed",
+      "error": "Provider transcript has invalid ordering, IDs, or timestamps. Retry or review another recording.",
+      "transcription_http_status": 200,
+      "extraction_attempted": false,
+      "invalid_field_detail_retained": false
+    },
+    "relative_open": {
+      "status": "not_attempted"
+    },
+    "reported_usage": {
+      "input_tokens": 785,
+      "output_tokens": 228,
+      "thought_tokens": 0,
+      "requests": [
+        {
+          "total_tokens": 408,
+          "total_input_tokens": 273,
+          "total_output_tokens": 135,
+          "total_thought_tokens": 0,
+          "latency_seconds": 2.239
+        },
+        {
+          "total_tokens": 276,
+          "total_input_tokens": 266,
+          "total_output_tokens": 10,
+          "total_thought_tokens": 0,
+          "latency_seconds": 1.114
+        },
+        {
+          "total_tokens": 329,
+          "total_input_tokens": 246,
+          "total_output_tokens": 83,
+          "total_thought_tokens": 0,
+          "latency_seconds": 2.054
+        }
+      ]
+    },
+    "stop_reason": "First pipeline failure: named-calendar transcript failed local ordering/ID/timestamp validation after HTTP200. Session guard stopped; no automatic retry."
+  },
+  "gate_report": {
+    "corpus": "callmap-independent-synthetic-v1",
+    "gates_version": "callmap-independent-gates-v1",
+    "scoring_only_no_requests": true,
+    "measured_cases": 1,
+    "total_cases": 3,
+    "quality_acceptance": "failed_frozen_gates",
+    "all_gates_passed": false,
+    "cases": {
+      "background-only": {
+        "source_sha256": "82b417b107cbcea5c84ea53e55aff42562269cdccfced76b7d92321145ad8b0e",
+        "passed": false,
+        "failures": [
+          "mean_timestamp_boundary",
+          "worst_timestamp_boundary"
+        ],
+        "checks": {
+          "word_error_rate": true,
+          "mean_timestamp_boundary": false,
+          "worst_timestamp_boundary": false,
+          "extraction_precision": true,
+          "extraction_recall": true,
+          "owner_agreement": true,
+          "date_agreement": true,
+          "no_false_positive_in_empty_case": true,
+          "exact_source_quotes": true
+        },
+        "metrics": {
+          "wer": 0.0,
+          "extraction": {
+            "true_positives": 0,
+            "predicted": 0,
+            "expected": 0,
+            "precision": 1,
+            "recall": 1,
+            "date_matches": 0,
+            "owner_matches": 0
+          },
+          "timestamp_errors": [
+            {
+              "reference_segment": 0,
+              "start_error_seconds": 0.0,
+              "end_error_seconds": 2.761
+            }
+          ],
+          "timestamp_mean_boundary_error_seconds": 1.381,
+          "method": "Normalized token Levenshtein WER; exact keyword/kind one-to-one extraction matching; best lexical-overlap segment boundary alignment. Review split/merged segments and paraphrases manually."
+        }
+      },
+      "named-calendar": {
+        "source_sha256": "2fbcdf15feb1c342f36e4f6496d794b82bbf312d4b0849208d442af2318d4f00",
+        "passed": false,
+        "failures": [
+          "pipeline_not_ready"
+        ],
+        "status": "failed"
+      },
+      "relative-open": {
+        "source_sha256": "6a8e93d733ae6bc149fff3f64a439c25724d8685412b6bba73779efc94c1d422",
+        "passed": false,
+        "failures": [
+          "not_attempted"
+        ],
+        "status": "not_attempted"
+      }
+    }
+  },
+  "interpretation": "Background text and zero commitments match. Frozen lexical boundary metric fails when a two-sentence reference utterance is split into two model segments. No gate, label, scorer or output was changed to turn that result into a pass. Named case has no accepted transcript and receives no quality score; relative case remains unattempted."
+}

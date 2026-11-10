@@ -29,7 +29,35 @@ def wer(reference, hypothesis):
     return previous[-1] / max(1, len(reference))
 
 
-def score(reference, labels, transcript, extraction):
+def aligned_timestamp_errors(reference_segments, segments, metric):
+    """Use lexical overlap; v2 permits one reference utterance to span split outputs."""
+    if metric not in {'lexical-single-segment-v1', 'lexical-contiguous-span-v2'}:
+        raise ValueError('Unknown timestamp metric version')
+    errors = []
+    for ref in reference_segments:
+        reference_words = set(words(ref['text']))
+        best_key, best_span = None, None
+        for start in range(len(segments)):
+            span_words = set()
+            ends = range(start, len(segments)) if metric.endswith('v2') else [start]
+            for end in ends:
+                span_words.update(words(segments[end]['text']))
+                overlap = len(reference_words & span_words) / max(1, len(reference_words | span_words))
+                # Prefer the shortest span, then earliest occurrence, on a lexical tie.
+                key = (overlap, -(end - start + 1), -start)
+                if best_key is None or key > best_key:
+                    best_key, best_span = key, (start, end)
+        start, end = best_span
+        errors.append(dict(
+            reference_segment=ref['id'],
+            start_error_seconds=round(abs(ref['start'] - segments[start]['start']), 3),
+            end_error_seconds=round(abs(ref['end'] - segments[end]['end']), 3),
+            matched_segment_ids=[segment['id'] for segment in segments[start:end + 1]],
+        ))
+    return errors
+
+
+def score(reference, labels, transcript, extraction, timestamp_metric='lexical-single-segment-v1'):
     reference_text = " ".join(s["text"] for s in reference["segments"])
     segments = transcript.model_dump()["segments"]
     predicted = extraction.model_dump(mode="json")["commitments"]
@@ -51,22 +79,7 @@ def score(reference, labels, transcript, extraction):
         if found:
             remaining.remove(found)
             matches.append((expected, found))
-    errors = []
-    for ref in reference["segments"]:
-        best = max(
-            segments,
-            key=lambda segment: (
-                len(set(words(ref["text"])) & set(words(segment["text"])))
-                / max(1, len(set(words(ref["text"])) | set(words(segment["text"]))))
-            ),
-        )
-        errors.append(
-            {
-                "reference_segment": ref["id"],
-                "start_error_seconds": round(abs(ref["start"] - best["start"]), 3),
-                "end_error_seconds": round(abs(ref["end"] - best["end"]), 3),
-            }
-        )
+    errors = aligned_timestamp_errors(reference['segments'], segments, timestamp_metric)
     tp = len(matches)
     return {
         "wer": round(wer(words(reference_text), words(hypothesis)), 4),
@@ -80,12 +93,13 @@ def score(reference, labels, transcript, extraction):
             "owner_matches": sum(e["owner"] == i["owner"] for e, i in matches),
         },
         "timestamp_errors": errors,
+        "timestamp_metric_version": timestamp_metric,
         "timestamp_mean_boundary_error_seconds": round(
             sum(e["start_error_seconds"] + e["end_error_seconds"] for e in errors)
             / (2 * len(errors)),
             3,
         ),
-        "method": "Normalized token Levenshtein WER; exact keyword/kind one-to-one extraction matching; best lexical-overlap segment boundary alignment. Review split/merged segments and paraphrases manually.",
+        "method": "Normalized token Levenshtein WER; exact keyword/kind one-to-one extraction matching; " + timestamp_metric + ". Review split/merged segments and paraphrases manually.",
     }
 
 

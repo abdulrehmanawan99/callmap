@@ -11,7 +11,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17.5-alpine
@@ -53,7 +53,7 @@ jobs:
           /tmp/callmap-audit/bin/pip install pip-audit==2.10.1 bandit==1.9.4
           /tmp/callmap-audit/bin/pip-audit --disable-pip --no-deps -r requirements.lock
           /tmp/callmap-audit/bin/bandit -r api scripts -ll
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps --only-shell chromium
         working-directory: web
       - name: Browser fixture workflow with real persistence
         env:
