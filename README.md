@@ -115,7 +115,7 @@ The scorer exits 1 on that file because one case fails (see Limitations). CI run
 
 ## Docs
 
-- [Architecture and provider boundary](docs/architecture.md)
+- [Architecture, provider boundary and decisions](docs/architecture.md)
 - [Threat model](docs/threat-model.md)
 - [Gemini setup, limits and evaluation](docs/live-provider.md)
 - [Development live validation](docs/live-validation.md)
