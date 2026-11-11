@@ -53,7 +53,7 @@ jobs:
           /tmp/callmap-audit/bin/pip install pip-audit==2.10.1 bandit==1.9.4
           /tmp/callmap-audit/bin/pip-audit --disable-pip --no-deps -r requirements.lock
           /tmp/callmap-audit/bin/bandit -r api scripts -ll
-      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npx playwright install --with-deps --only-shell chromium || (echo 'apt mirror unavailable; using runner image libraries' && npx playwright install --only-shell chromium)
         working-directory: web
       - name: Browser fixture workflow with real persistence
         env:
