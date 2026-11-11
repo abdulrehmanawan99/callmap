@@ -32,3 +32,18 @@ Cancellation/deletion is checked before each stage and guarded again at publicat
 ## Retention and recovery
 
 Audio, reviews, and jobs persist until explicit deletion. PostgreSQL and Redis have distinct project volumes; private audio resides in the checkout's ignored `.data`. Back up both the PostgreSQL database and audio directory together if needed. A file write happens before the recording transaction; a process kill in that short window can leave an orphan WAV. `scripts/prune_audio.py` lists orphan UUID WAVs by default; `--apply` deletes only listed orphans older than one hour. Run `.venv/bin/python -m scripts.prune_audio` (or add `--apply`) with API/worker stopped. There is no automatic retention, backup, retry scheduler, or production supervisor.
+
+## Architecture decisions
+
+| # | Decision | Why | Trade-off |
+| - | --- | --- | --- |
+| 1 | Two typed model stages (audio → transcript, transcript → commitments) instead of one prompt | Each stage has its own schema and deterministic checks: segment timing, exact source quotations, owner evidence | Two requests per recording, and the second depends on transcript quality |
+| 2 | Every commitment must cite segment IDs and an exact quotation; named owners need explicit assignment evidence; relative dates stay unresolved | Traceability is checkable in code; a model cannot assign work to someone who was not assigned it | Strict checks reject some correct but loosely phrased extractions (the named-owner/date live case) |
+| 3 | Fixture mode is gated by the whole-file SHA-256 of the bundled sample | Fixture output can never be presented for a user's own audio | Fixture mode only works for the sample |
+| 4 | PostgreSQL is the source of truth for job state; Redis is only a wake-up hint | A lost Redis message costs at most one second of polling, never a recording | Two stores to run locally |
+| 5 | One worker under an advisory lock, with attempt counters on every guarded write | A stale worker cannot publish into a newer attempt, and restarts recover cleanly | No parallel processing; one recording at a time |
+| 6 | Interrupted live jobs become `failed` and need an explicit retry; fixture jobs re-queue | The earlier provider requests may already have been sent and billed, so a resend is the user's choice | Extra click after a crash |
+| 7 | Uncompressed PCM WAV only, parsed with Python's standard library | No external decoder (ffmpeg) to sandbox; bounded and simple validation | Users must convert MP3/M4A first |
+| 8 | Inline base64 audio (≤10 MiB) to `gemini-3.5-flash-lite`, `store=false`, no Files API, no retries | No upload storage on the provider side; predictable request count | Long recordings are rejected for live mode |
+| 9 | Random per-checkout bearer token plus Host/Origin allowlists, loopback only | Stops other websites and local users without the token file from reading private audio | Not multi-user authentication |
+| 10 | Only reviewed items are exported | A human confirms every commitment before it leaves the app | Unreviewed suggestions are not exportable |

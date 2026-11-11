@@ -1,5 +1,9 @@
 # Local v1 release notes
 
+## 11 November 2026: documentation
+
+- Added an architecture decisions table to the [architecture](architecture.md) page.
+
 ## 6 November 2026 — validation follow-up
 
 - Fixed a real Gemini schema-complexity rejection while retaining complete local
